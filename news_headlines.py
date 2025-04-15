@@ -112,12 +112,8 @@ def get_rss():
 
 
 class NewsHeadlinesApp(InkyAppBase):
-    def __init__(self, graphics=None, width=None, height=None):
-        super().__init__(graphics, width, height)
-        self.feed = []
-        self.code = qrcode.QRCode()
-
-    def setup(self):
+    def __init__(self):
+        super().__init__()
         self.feed = []
         self.code = qrcode.QRCode()
 
@@ -144,8 +140,8 @@ class NewsHeadlinesApp(InkyAppBase):
         g.set_pen(1)
         g.clear()
         g.set_pen(0)
-        width = self.WIDTH
-        height = self.HEIGHT
+        width = self.width
+        height = self.height
         feed = self.feed
         if feed and len(feed) > 1:
             g.set_pen(g.create_pen(200, 0, 0))
@@ -174,7 +170,7 @@ class NewsHeadlinesApp(InkyAppBase):
         g.update()
 
     @property
-    def UPDATE_INTERVAL(self):
+    def update_interval(self):
         return 90
 
 

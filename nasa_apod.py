@@ -13,10 +13,10 @@ API_URL = "https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
 
 
 class NasaApodApp(InkyAppBase):
-    def __init__(self, graphics=None, width=None, height=None):
-        super().__init__(graphics, width, height)
-        self.apod_title = None
-        self.jpeg = jpegdec.JPEG(graphics) if graphics else None
+    def __init__(self):
+        super().__init__()
+        self.apod_title = "Space!"
+        self.jpeg = jpegdec.JPEG(self.graphics) if self.graphics else None
         # Set image URL based on display_type from base class
         if self.display_type == "5.7":
             self.img_url = "https://pimoroni.github.io/feed2image/nasa-apod-daily.jpg"
@@ -27,7 +27,6 @@ class NasaApodApp(InkyAppBase):
         else:
             self.img_url = None
 
-    def setup(self):
         # Fetch APOD title from API
         try:
             # Grab the image
@@ -54,7 +53,6 @@ class NasaApodApp(InkyAppBase):
         self.img_url = None
         # Optionally, reset jpeg decoder or other resources
 
-
     def update(self):
         # This could be used for periodic refreshes if needed
         pass
@@ -70,22 +68,23 @@ class NasaApodApp(InkyAppBase):
         try:
             jpeg.open_file(FILENAME)
             jpeg.decode()
-        except OSError:
-            self.show_error()
+        except OSError as e:
+            print(e)
+            self.show_error("Unable to display image!")
 
         graphics.set_pen(0)
-        graphics.rectangle(0, HEIGHT - 25, WIDTH, 25)
+        graphics.rectangle(0, self.height - 25, self.width, 25)
         graphics.set_pen(1)
-        graphics.text(self.apod_title, 5, HEIGHT - 20, WIDTH, 2)
+        graphics.text(self.apod_title, 5, self.height - 20, self.width, 2)
 
         gc.collect()
 
         graphics.update()
 
     @property
-    def UPDATE_INTERVAL(self):
+    def update_interval(self):
         return 240
 
 
-# Provide a module-level app instance for compatibility
+# Module-level app instance for compatibility
 app = NasaApodApp()

@@ -1,4 +1,8 @@
+from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY  # 7.3"
+from picographics import PicoGraphics
+
 from inky_helper import get_inky_frame_type
+from logger import Logger
 
 
 class InkyAppBase:
@@ -7,32 +11,29 @@ class InkyAppBase:
     Provides a standard interface and shared logic for all apps.
     """
 
-    def show_error(self, message="Unable to display image!", graphics=None, width=None, height=None):
+    def __init__(self):
+        """Initialize and return the graphics object and display dimensions."""
+        self.graphics = PicoGraphics(DISPLAY)
+        self.width, self.height = self.graphics.get_bounds()
+        self.graphics.set_font("bitmap8")
+        self.display_type = get_inky_frame_type(
+            self.height) if self.height is not None else None
+        self.logger = Logger(default_context={"app": self.__class__.__name__})
+
+    def show_error(self, message="Unable to display image!"):
         """
         Draw a standard error message box at the center of the screen.
         Uses self.graphics, self.WIDTH, self.HEIGHT by default, but allows overrides.
         """
-        g = graphics if graphics is not None else self.graphics
-        w = width if width is not None else self.WIDTH
-        h = height if height is not None else self.HEIGHT
-        if g is None or w is None or h is None:
-            return
-        g.set_pen(4)
-        g.rectangle(0, (h // 2) - 20, w, 40)
-        g.set_pen(1)
-        g.text(message, 5, (h // 2) - 15, w, 2)
-        g.text("Check your network settings in secrets.py", 5, (h // 2) + 2, w, 2)
+        graphics = self.graphics
+        width = self.width
+        height = self.height
 
-    def __init__(self, graphics=None, width=None, height=None):
-        self.graphics = graphics
-        self.WIDTH = width
-        self.HEIGHT = height
-        self.display_type = get_inky_frame_type(
-            height) if height is not None else None
-
-    def setup(self):
-        """Perform any initialization logic when the app is loaded/launched."""
-        raise NotImplementedError("setup() must be implemented by subclass")
+        graphics.set_pen(4)
+        graphics.rectangle(0, (height // 2) - 20, width, 40)
+        graphics.set_pen(1)
+        graphics.text(message, 5, (height // 2) - 15, width, 2)
+        # graphics.text("Check your network settings in secrets.py", 5, (height // 2) + 2, width, 2)
 
     def teardown(self):
         """Perform any cleanup logic when the app is exited/unloaded."""
@@ -47,6 +48,6 @@ class InkyAppBase:
         raise NotImplementedError("draw() must be implemented by subclass")
 
     @property
-    def UPDATE_INTERVAL(self):
+    def update_interval(self):
         """Return the update interval in minutes (override in subclass if needed)."""
         return 10

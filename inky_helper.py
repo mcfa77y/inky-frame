@@ -1,12 +1,13 @@
-from pimoroni_i2c import PimoroniI2C
-from pcf85063a import PCF85063A
-import math
-from machine import Pin, PWM, Timer
-import time
-import inky_frame
 import json
-import network
+import math
 import os
+import time
+
+import inky_frame
+import network
+from machine import PWM, Pin, Timer
+from pcf85063a import PCF85063A
+from pimoroni_i2c import PimoroniI2C
 
 # Pin setup for VSYS_HOLD needed to sleep and wake.
 HOLD_VSYS_EN_PIN = 2
@@ -40,7 +41,8 @@ network_led_pulse_speed_hz = 1
 
 def network_led_callback(t):
     # updates the network led brightness based on a sinusoid seeded by the current time
-    brightness = (math.sin(time.ticks_ms() * math.pi * 2 / (1000 / network_led_pulse_speed_hz)) * 40) + 60
+    brightness = (math.sin(time.ticks_ms() * math.pi * 2 /
+                  (1000 / network_led_pulse_speed_hz)) * 40) + 60
     value = int(pow(brightness / 100.0, 2.8) * 65535.0 + 0.5)
     network_led_pwm.duty_u16(value)
 
@@ -50,7 +52,8 @@ def pulse_network_led(speed_hz=1):
     global network_led_timer, network_led_pulse_speed_hz
     network_led_pulse_speed_hz = speed_hz
     network_led_timer.deinit()
-    network_led_timer.init(period=50, mode=Timer.PERIODIC, callback=network_led_callback)
+    network_led_timer.init(period=50, mode=Timer.PERIODIC,
+                           callback=network_led_callback)
 
 
 # turn off the network led and disable any pulsing animation that's running
@@ -149,9 +152,12 @@ def update_state(running):
 
 def launch_app(app_name):
     global app
-    app = __import__(app_name)
+    app_module = __import__(app_name)
+    print(dir(app_module))
+    app = getattr(app_module, "app")
     print(app)
     update_state(app_name)
+
 
 def get_inky_frame_type(height):
     """Return the Inky Frame type as a string based on the display height."""

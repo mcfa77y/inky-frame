@@ -13,20 +13,20 @@ ENDPOINT = "https://pimoroni.github.io/feed2image/xkcd-daily.jpg"
 
 
 class DailyXkcdApp(InkyAppBase):
-    def __init__(self, graphics=None, width=None, height=None):
-        super().__init__(graphics, width, height)
+    def __init__(self):
+        super().__init__()
         self.sd = None
         self.sd_spi = None
         self.img_url = None
 
-    def setup(self):
         # Setup SD card and determine image URL based on display type
         self.sd_spi = machine.SPI(0, sck=machine.Pin(18, machine.Pin.OUT), mosi=machine.Pin(
             19, machine.Pin.OUT), miso=machine.Pin(16, machine.Pin.OUT))
         self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
         try:
             uos.mount(self.sd, "/sd")
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Unable to mount SD card: {e}")
             pass  # Already mounted or error
         gc.collect()
         # Set image URL based on display type
@@ -59,7 +59,7 @@ class DailyXkcdApp(InkyAppBase):
             del data
             gc.collect()
         except Exception as e:
-            print("Error downloading XKCD image:", e)
+            self.logger.error(f"Error downloading XKCD image: {e}")
             self.show_error("Unable to download XKCD image!")
 
     def draw(self):
@@ -71,12 +71,12 @@ class DailyXkcdApp(InkyAppBase):
             jpeg.open_file(FILENAME)
             jpeg.decode()
         except Exception as e:
-            print("Error decoding/displaying XKCD image:", e)
+            self.logger.error(f"Error decoding/displaying XKCD image: {e}")
             self.show_error("Unable to display XKCD image!")
         self.graphics.update()
 
     @property
-    def UPDATE_INTERVAL(self):
+    def update_interval(self):
         return 240
 
 

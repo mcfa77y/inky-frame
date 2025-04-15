@@ -11,24 +11,18 @@ Make sure to uncomment the correct size for your display!
 
 """
 
-from inky_app_base import InkyAppBase
-import urequests
 import inky_frame
+import urequests
+
+from inky_app_base import InkyAppBase
 
 POSTCODE = "S9"
 URL = "https://api.carbonintensity.org.uk/regional/postcode/" + str(POSTCODE)
 
-class CarbonIntensityApp(InkyAppBase):
-    def __init__(self, graphics=None, width=None, height=None):
-        super().__init__(graphics, width, height)
-        self.region = None
-        self.forecast = None
-        self.index = None
-        self.power_list = [0]*9
-        self.datetime_to = ["", ""]
-        self.datetime_from = ["", ""]
 
-    def setup(self):
+class CarbonIntensityApp(InkyAppBase):
+    def __init__(self):
+        super().__init__()
         self.region = None
         self.forecast = None
         self.index = None
@@ -41,26 +35,27 @@ class CarbonIntensityApp(InkyAppBase):
 
     def update(self):
         try:
-            print(f"Requesting URL: {URL}")
+            self.logger.info(f"Requesting URL: {URL}")
             r = urequests.get(URL)
             j = r.json()
-            print("Data obtained!")
-            print(j)
+            self.logger.info("Data obtained!")
+            self.logger.debug(str(j))
             self.region = j["data"][0]["shortname"]
             self.forecast = j["data"][0]["data"][0]["intensity"]["forecast"]
             self.index = j["data"][0]["data"][0]["intensity"]["index"]
-            self.power_list = [power['perc'] for power in j["data"][0]["data"][0]["generationmix"]]
+            self.power_list = [power['perc']
+                               for power in j["data"][0]["data"][0]["generationmix"]]
             self.datetime_to = j["data"][0]["data"][0]["to"].split("T")
             self.datetime_from = j["data"][0]["data"][0]["from"].split("T")
             r.close()
         except Exception as e:
-            print("Error fetching carbon intensity data:", e)
+            self.logger.error(f"Error fetching carbon intensity data: {e}")
             self.show_error("Unable to fetch carbon data!")
 
     def draw(self):
         g = self.graphics
-        w = self.WIDTH
-        h = self.HEIGHT
+        w = self.width
+        h = self.height
         g.set_pen(inky_frame.WHITE)
         g.clear()
         # draw lines
@@ -84,20 +79,24 @@ class CarbonIntensityApp(InkyAppBase):
         ]
         for idx, p in enumerate(self.power_list):
             g.set_pen(bar_colours[idx])
-            g.rectangle(int(idx * w / 9), int(h - p * (h / 100)), int(w / 9), int(h / 100 * p))
+            g.rectangle(int(idx * w / 9), int(h - p * (h / 100)),
+                        int(w / 9), int(h / 100 * p))
         # draw labels
         g.set_font('sans')
         # once in white for a background
         g.set_pen(inky_frame.WHITE)
-        labels = ['biomass', 'coal', 'imports', 'gas', 'nuclear', 'other', 'hydro', 'solar', 'wind']
+        labels = ['biomass', 'coal', 'imports', 'gas',
+                  'nuclear', 'other', 'hydro', 'solar', 'wind']
         g.set_thickness(4)
         for idx, label in enumerate(labels):
-            g.text(f'{label}', int((idx * w / 9) + (w / 9) / 2), h - 10, angle=270, scale=1)
+            g.text(f'{label}', int((idx * w / 9) + (w / 9) / 2),
+                   h - 10, angle=270, scale=1)
         # again in black
         g.set_pen(inky_frame.BLACK)
         g.set_thickness(2)
         for idx, label in enumerate(labels):
-            g.text(f'{label}', int((idx * w / 9) + (w / 9) / 2), h - 10, angle=270, scale=1)
+            g.text(f'{label}', int((idx * w / 9) + (w / 9) / 2),
+                   h - 10, angle=270, scale=1)
         # draw header
         g.set_thickness(3)
         g.set_pen(inky_frame.GREEN)
@@ -111,13 +110,16 @@ class CarbonIntensityApp(InkyAppBase):
         g.set_pen(inky_frame.BLACK)
         g.set_font("bitmap8")
         g.text(f'Region: {self.region}', int((w / 2) + 30), 10, scale=2)
-        g.text(f'{self.forecast} gCO2/kWh ({self.index})', int((w / 2) + 30), 30, scale=2)
-        g.text(f'{self.datetime_from[0]} {self.datetime_from[1]} to {self.datetime_to[1]}', int((w / 2) + 30), 50, scale=2)
+        g.text(f'{self.forecast} gCO2/kWh ({self.index})',
+               int((w / 2) + 30), 30, scale=2)
+        g.text(f'{self.datetime_from[0]} {self.datetime_from[1]} to {self.datetime_to[1]}', int(
+            (w / 2) + 30), 50, scale=2)
         g.update()
 
     @property
     def UPDATE_INTERVAL(self):
         return 240
+
 
 # Module-level app instance for compatibility
 app = CarbonIntensityApp()

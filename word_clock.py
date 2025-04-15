@@ -24,8 +24,8 @@ def approx_time(hours, minutes):
 
 
 class WordClockApp(InkyAppBase):
-    def __init__(self, graphics=None, width=None, height=None):
-        super().__init__(graphics, width, height)
+    def __init__(self):
+        super().__init__()
         self.rtc = machine.RTC()
         self.time_string = None
         self.words = ["it", "d", "is", "m", "about", "l", "half", "c", "quarter", "b", "to", "u", "past", "n", "one",
@@ -49,10 +49,6 @@ class WordClockApp(InkyAppBase):
         self.scale = 5
         self.spacing = 2
 
-    def setup(self):
-        # Any setup logic if needed
-        pass
-
     def teardown(self):
         # Any cleanup logic if needed
         self.time_string = None
@@ -63,9 +59,9 @@ class WordClockApp(InkyAppBase):
         except OSError:
             print("Unable to contact NTP server")
         current_t = self.rtc.datetime()
-        TIMEZONE_OFFSET = 0
+        timezone_offset = -7
         utc_hour = current_t[4]
-        pst_hour = (utc_hour + TIMEZONE_OFFSET) % 24
+        pst_hour = (utc_hour + timezone_offset) % 24
         pst_hour_display = pst_hour if pst_hour <= 12 else pst_hour - 12
         minutes = current_t[5]
         tstr = approx_time(pst_hour_display, minutes)
@@ -87,10 +83,10 @@ class WordClockApp(InkyAppBase):
             for letter in word:
                 text_length = graphics.measure_text(
                     letter, self.scale, self.spacing)
-                if not x + text_length <= self.WIDTH:
+                if not x + text_length <= self.width:
                     y += self.line_space
                     x = self.default_x
-                graphics.text(letter.upper(), x, y, self.WIDTH,
+                graphics.text(letter.upper(), x, y, self.width,
                               scale=self.scale, spacing=self.spacing)
                 x += self.letter_space
         graphics.update()

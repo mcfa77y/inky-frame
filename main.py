@@ -12,14 +12,6 @@ import inky_helper as inky_utils
 from inky_app_base import InkyAppBase
 
 
-def setup_graphics():
-    """Initialize and return the graphics object and display dimensions."""
-    graphics = PicoGraphics(DISPLAY)
-    WIDTH, HEIGHT = graphics.get_bounds()
-    graphics.set_font("bitmap8")
-    return graphics, WIDTH, HEIGHT
-
-
 def connect_wifi():
     """Attempt to connect to WiFi using secrets.py, if available."""
     try:
@@ -38,8 +30,8 @@ def handle_launcher_selection(button, app_name):
 
 
 class LauncherApp(InkyAppBase):
-    def __init__(self, graphics=None, width=None, height=None):
-        super().__init__(graphics, width, height)
+    def __init__(self):
+        super().__init__()
         self.menu_items = [
             (4, "A. NASA Picture of the Day", 340,
              inky_utils.inky_frame.button_a, "nasa_apod"),
@@ -61,8 +53,8 @@ class LauncherApp(InkyAppBase):
 
     def draw(self):
         g = self.graphics
-        width = self.WIDTH
-        height = self.HEIGHT
+        width = self.width
+        height = self.height
         y_offset = self.y_offset
         g.set_pen(1)
         g.clear()
@@ -109,7 +101,6 @@ def main():
     if inky_utils.inky_frame.button_a.read() and inky_utils.inky_frame.button_e.read():
         # Use the LauncherApp as the app
         inky_utils.app = launcherApp
-        launcherApp.setup()
         launcherApp.draw()
         while True:
             launcherApp.update()
@@ -121,12 +112,9 @@ def main():
         # Loads the JSON and launches the app
         inky_utils.load_state()
         inky_utils.launch_app(inky_utils.state['run'])
-        # Pass graphics/display info to app
-        inky_utils.app.setup()
     else:
         # Use the LauncherApp as the app
         inky_utils.app = launcherApp
-        launcherApp.setup()
         launcherApp.draw()
         while True:
             launcherApp.update()
@@ -144,7 +132,7 @@ def main():
         inky_utils.led_warn.on()
         inky_utils.app.draw()
         inky_utils.led_warn.off()
-        inky_utils.sleep(inky_utils.app.UPDATE_INTERVAL)
+        inky_utils.sleep(inky_utils.app.update_interval)
 
 
 if __name__ == "__main__":
