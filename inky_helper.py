@@ -9,6 +9,10 @@ from machine import PWM, Pin, Timer
 from pcf85063a import PCF85063A
 from pimoroni_i2c import PimoroniI2C
 
+from logger import Logger
+
+inky_helper_logger = Logger(default_context={"app": "inky_helper"})
+
 # Pin setup for VSYS_HOLD needed to sleep and wake.
 HOLD_VSYS_EN_PIN = 2
 hold_vsys_en_pin = Pin(HOLD_VSYS_EN_PIN, Pin.OUT)
@@ -29,9 +33,12 @@ network_led_pwm.duty_u16(0)
 
 # set the brightness of the network led
 def network_led(brightness):
+    inky_helper_logger.debug(
+        f"network_led called with brightness={brightness}")
     brightness = max(0, min(100, brightness))  # clamp to range
     # gamma correct the brightness (gamma 2.8)
     value = int(pow(brightness / 100.0, 2.8) * 65535.0 + 0.5)
+    inky_helper_logger.debug(f"Setting network LED PWM duty to {value}")
     network_led_pwm.duty_u16(value)
 
 
@@ -40,15 +47,19 @@ network_led_pulse_speed_hz = 1
 
 
 def network_led_callback(t):
+    inky_helper_logger.debug("network_led_callback triggered")
     # updates the network led brightness based on a sinusoid seeded by the current time
     brightness = (math.sin(time.ticks_ms() * math.pi * 2 /
                   (1000 / network_led_pulse_speed_hz)) * 40) + 60
     value = int(pow(brightness / 100.0, 2.8) * 65535.0 + 0.5)
+    inky_helper_logger.debug(f"network_led_callback sets PWM duty to {value}")
     network_led_pwm.duty_u16(value)
 
 
 # set the network led into pulsing mode
 def pulse_network_led(speed_hz=1):
+    inky_helper_logger.debug(
+        f"pulse_network_led called with speed_hz={speed_hz}")
     global network_led_timer, network_led_pulse_speed_hz
     network_led_pulse_speed_hz = speed_hz
     network_led_timer.deinit()
@@ -58,27 +69,30 @@ def pulse_network_led(speed_hz=1):
 
 # turn off the network led and disable any pulsing animation that's running
 def stop_network_led():
+    inky_helper_logger.debug("stop_network_led called")
     global network_led_timer
     network_led_timer.deinit()
     network_led_pwm.duty_u16(0)
 
 
-def sleep(t):
+def sleep(minutes: int):
+    # inky_helper_logger.debug(f"sleep called for {minutes} minutes")
     # Time to have a little nap until the next update
     rtc.clear_timer_flag()
-    rtc.set_timer(t, ttp=rtc.TIMER_TICK_1_OVER_60HZ)
+    rtc.set_timer(minutes, ttp=rtc.TIMER_TICK_1_OVER_60HZ)
     rtc.enable_timer_interrupt(True)
 
     # Set the HOLD VSYS pin to an input
     # this allows the device to go into sleep mode when on battery power.
     hold_vsys_en_pin.init(Pin.IN)
-
+    # inky_helper_logger.debug("Set HOLD_VSYS_EN_PIN to input for sleep mode")
     # Regular time.sleep for those powering from USB
-    time.sleep(60 * t)
+    time.sleep(60 * minutes)
 
 
 # Turns off the button LEDs
 def clear_button_leds():
+    inky_helper_logger.debug("clear_button_leds called")
     inky_frame.button_a.led_off()
     inky_frame.button_b.led_off()
     inky_frame.button_c.led_off()
@@ -87,6 +101,7 @@ def clear_button_leds():
 
 
 def network_connect(SSID, PSK):
+    inky_helper_logger.debug(f"network_connect called with SSID={SSID}")
     # Enable the Wireless
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -98,12 +113,14 @@ def network_connect(SSID, PSK):
     pulse_network_led()
     wlan.config(pm=0xa11140)  # Turn WiFi power saving off for some slow APs
     wlan.connect(SSID, PSK)
+    inky_helper_logger.debug("Attempting WiFi connection")
 
     while max_wait > 0:
         if wlan.status() < 0 or wlan.status() >= 3:
             break
         max_wait -= 1
-        print('waiting for connection...')
+        inky_helper_logger.debug(
+            f"Waiting for connection... attempts left: {max_wait}")
         time.sleep(1)
 
     stop_network_led()
@@ -111,8 +128,12 @@ def network_connect(SSID, PSK):
 
     # Handle connection error. Switches the Warn LED on.
     if wlan.status() != 3:
+        inky_helper_logger.debug(
+            f"WiFi connection failed with status {wlan.status()}")
         stop_network_led()
         led_warn.on()
+    else:
+        inky_helper_logger.debug("WiFi connection successful")
 
 
 state = {"run": None}
@@ -120,52 +141,75 @@ app = None
 
 
 def file_exists(filename):
+    inky_helper_logger.debug(f"file_exists called with filename={filename}")
     try:
-        return (os.stat(filename)[0] & 0x4000) == 0
-    except OSError:
+        exists = (os.stat(filename)[0] & 0x4000) == 0
+        inky_helper_logger.debug(f"file_exists: {filename} exists: {exists}")
+        return exists
+    except OSError as e:
+        inky_helper_logger.debug(
+            f"file_exists: {filename} not found, OSError: {e}")
         return False
 
 
 def clear_state():
+    inky_helper_logger.debug("clear_state called")
     if file_exists("state.json"):
         os.remove("state.json")
+        inky_helper_logger.debug("state.json removed")
+    else:
+        inky_helper_logger.debug("state.json does not exist")
 
 
 def save_state(data):
+    inky_helper_logger.debug(f"save_state called with data={data}")
     with open("/state.json", "w") as f:
         f.write(json.dumps(data))
         f.flush()
+    inky_helper_logger.debug("State saved to /state.json")
 
 
 def load_state():
+    inky_helper_logger.debug("load_state called")
     global state
     data = json.loads(open("/state.json", "r").read())
     if type(data) is dict:
         state = data
+        inky_helper_logger.debug(f"State loaded: {state}")
+    else:
+        inky_helper_logger.debug("State loaded is not a dict")
 
 
 def update_state(running):
+    inky_helper_logger.debug(f"update_state called with running={running}")
     global state
     state['run'] = running
     save_state(state)
 
 
 def launch_app(app_name):
+    inky_helper_logger.debug(f"launch_app called with app_name={app_name}")
     global app
     app_module = __import__(app_name)
-    print(dir(app_module))
+    inky_helper_logger.debug(f"Imported module {app_name}: {dir(app_module)}")
     app = getattr(app_module, "app")
-    print(app)
+    inky_helper_logger.debug(f"App object: {app}")
     update_state(app_name)
 
 
 def get_inky_frame_type(height):
+    inky_helper_logger.debug(
+        f"get_inky_frame_type called with height={height}")
     """Return the Inky Frame type as a string based on the display height."""
     if height == 448:
+        inky_helper_logger.debug("Frame type is 5.7")
         return "5.7"
     elif height == 480:
+        inky_helper_logger.debug("Frame type is 7.3")
         return "7.3"
     elif height == 320:
+        inky_helper_logger.debug("Frame type is 4.0")
         return "4.0"
     else:
+        inky_helper_logger.debug("Frame type is unknown")
         return "unknown"

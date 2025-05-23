@@ -1,7 +1,31 @@
+import time
+
 import machine
 import ntptime
 
 from inky_app_base import InkyAppBase
+
+
+def set_time_with_retries(rtc, retries=3):
+    """
+    Try to set time from NTP server up to `retries` times.
+    If all attempts fail, set time to 12:00 (noon).
+    """
+    for attempt in range(retries):
+        try:
+            ntptime.settime()
+            print(f"Time set from NTP: {rtc.datetime()}")
+            return
+        except OSError:
+            print(
+                f"Unable to contact NTP server (attempt {attempt+1}/{retries})")
+            time.sleep(1)
+    # All attempts failed, set default time to 12:00:00
+    print("Setting default time to 12:00:00")
+    # rtc.datetime: (year, month, day, weekday, hour, minute, second, microsecond)
+    # We'll keep the date, but set time to 12:00:00
+    current = rtc.datetime()
+    rtc.datetime((current[0], current[1], current[2], current[3], 12, 0, 0, 0))
 
 
 def approx_time(hours, minutes):
@@ -54,10 +78,7 @@ class WordClockApp(InkyAppBase):
         self.time_string = None
 
     def update(self):
-        try:
-            ntptime.settime()
-        except OSError:
-            print("Unable to contact NTP server")
+        set_time_with_retries(self.rtc)
         current_t = self.rtc.datetime()
         timezone_offset = -7
         utc_hour = current_t[4]
