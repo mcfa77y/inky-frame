@@ -90,6 +90,30 @@ class DailySofterWorldApp(InkyAppBase):
         self.logger.info(f"Previous comic: {self.current_comic}")
         self.download_comic(self.current_comic)
 
+    def random_comic(self):
+        """Go to a random comic"""
+        self.current_comic = urandom.randint(1, self.max_comic)
+        self.logger.info(f"Random comic: {self.current_comic}")
+        self.download_comic(self.current_comic)
+
+    # Button press handlers
+    def button_a_press(self):
+        """Button A: Go to previous comic"""
+        self.previous_comic()
+
+    def button_b_press(self):
+        """Button B: Go to next comic"""
+        self.next_comic()
+
+    def button_c_press(self):
+        """Button C: Go to random comic"""
+        self.random_comic()
+
+    def button_d_press(self):
+        """Button D: Refresh current comic"""
+        self.logger.info(f"Refreshing comic {self.current_comic}")
+        self.download_comic(self.current_comic)
+
     def draw(self):
         gc.collect()
         jpeg = jpegdec.JPEG(self.graphics)

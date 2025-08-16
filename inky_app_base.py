@@ -51,3 +51,24 @@ class InkyAppBase:
     def update_minute_interval(self) -> int:
         """Return the update interval in minutes (override in subclass if needed)."""
         return 10
+
+    # Button press handlers (to be implemented by subclass if needed)
+    def button_a_press(self):
+        """Handle button A press (override in subclass if needed)."""
+        pass
+
+    def button_b_press(self):
+        """Handle button B press (override in subclass if needed)."""
+        pass
+
+    def button_c_press(self):
+        """Handle button C press (override in subclass if needed)."""
+        pass
+
+    def button_d_press(self):
+        """Handle button D press (override in subclass if needed)."""
+        pass
+
+    def button_e_press(self):
+        """Handle button E press (override in subclass if needed)."""
+        pass

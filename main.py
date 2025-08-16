@@ -9,59 +9,62 @@ from logger import Logger
 main_logger = Logger(default_context={"app": "main"})
 
 # Button state tracking
-button_a_last_state = False
-button_e_last_state = False
-loading_comic = False
+button_states = {
+    'a': False,
+    'b': False,
+    'c': False,
+    'd': False,
+    'e': False
+}
+loading_action = False
 
-def handle_comic_navigation():
-    """Handle comic navigation with wave pattern during loading"""
-    global button_a_last_state, button_e_last_state, loading_comic
+def handle_button_press():
+    """Handle button presses using standardized button press methods"""
+    global button_states, loading_action
     
-    # Check button A (previous comic)
-    button_a_current = inky_frame.button_a.read()
-    if button_a_current and not button_a_last_state and hasattr(inky_utils.app, 'previous_comic') and not loading_comic:
-        loading_comic = True
-        main_logger.info("Loading previous comic...")
-        
-        # Start wave pattern
-        inky_utils.start_wave_pattern()
-        
-        try:
-            # Load previous comic
-            inky_utils.app.previous_comic()
-            # Draw the new comic
-            inky_utils.app.draw()
-        except Exception as e:
-            main_logger.error(f"Error loading previous comic: {e}")
-        finally:
-            # Stop wave pattern
-            inky_utils.stop_wave_pattern()
-            loading_comic = False
+    # Define button mappings
+    buttons = {
+        'a': inky_frame.button_a,
+        'b': inky_frame.button_b,
+        'c': inky_frame.button_c,
+        'd': inky_frame.button_d,
+        'e': inky_frame.button_e
+    }
     
-    button_a_last_state = button_a_current
-    
-    # Check button E (next comic)
-    button_e_current = inky_frame.button_e.read()
-    if button_e_current and not button_e_last_state and hasattr(inky_utils.app, 'next_comic') and not loading_comic:
-        loading_comic = True
-        main_logger.info("Loading next comic...")
+    # Check each button for press events
+    for button_name, button_obj in buttons.items():
+        current_state = button_obj.read()
+        last_state = button_states[button_name]
         
-        # Start wave pattern
-        inky_utils.start_wave_pattern()
+        # Detect button press (transition from False to True)
+        if current_state and not last_state and not loading_action:
+            loading_action = True
+            button_method = f"button_{button_name}_press"
+            
+            # Check if the app has the button press method
+            if hasattr(inky_utils.app, button_method):
+                main_logger.info(f"Button {button_name.upper()} pressed")
+                
+                # Start wave pattern for visual feedback
+                inky_utils.start_wave_pattern()
+                
+                try:
+                    # Call the button press method
+                    getattr(inky_utils.app, button_method)()
+                    # Redraw the display
+                    inky_utils.app.draw()
+                except Exception as e:
+                    main_logger.error(f"Error handling button {button_name} press: {e}")
+                finally:
+                    # Stop wave pattern
+                    inky_utils.stop_wave_pattern()
+                    loading_action = False
+            else:
+                loading_action = False
+                main_logger.debug(f"Button {button_name} pressed but no handler found")
         
-        try:
-            # Load next comic
-            inky_utils.app.next_comic()
-            # Draw the new comic
-            inky_utils.app.draw()
-        except Exception as e:
-            main_logger.error(f"Error loading next comic: {e}")
-        finally:
-            # Stop wave pattern
-            inky_utils.stop_wave_pattern()
-            loading_comic = False
-    
-    button_e_last_state = button_e_current
+        # Update button state
+        button_states[button_name] = current_state
 
 def main():
     # A short delay to give USB chance to initialise
@@ -90,11 +93,11 @@ def main():
     inky_utils.app.draw()
 
     # Interactive main loop - check for button presses and handle navigation
-    main_logger.info("Starting interactive mode - Press Button A for previous comic, Button E for next comic")
+    main_logger.info("Starting interactive mode - Press buttons A-E for app-specific actions")
     
     while True:
         # Handle button navigation
-        handle_comic_navigation()
+        handle_button_press()
         
         # Small delay to prevent excessive CPU usage
         time.sleep(0.1)

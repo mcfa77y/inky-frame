@@ -98,6 +98,21 @@ class WeatherApp(InkyAppBase):
         self.logger.info(f"Previous weather view: {current_view}")
         self.download_weather(self.zipcode, current_view)
 
+    # Button press handlers
+    def button_a_press(self):
+        """Button A: Go to previous weather view"""
+        self.previous_weather_view()
+
+    def button_b_press(self):
+        """Button B: Go to next weather view"""
+        self.next_weather_view()
+
+    def button_c_press(self):
+        """Button C: Refresh current weather view"""
+        current_view = self.weather_views[self.current_view_index]
+        self.logger.info(f"Refreshing {current_view} weather view")
+        self.download_weather(self.zipcode, current_view)
+
     # Compatibility methods for interactive main.py navigation
     def next_comic(self):
         """Alias for next_weather_view() for main.py compatibility"""
