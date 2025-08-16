@@ -76,47 +76,93 @@ def stop_network_led():
     network_led_pwm.duty_u16(0)
 
 
-# Wave light pattern for button LEDs
+# Wave light pattern for button LEDs using PWM
 wave_timer = Timer(-1)
-wave_step = 0
+wave_position = 0.0
 wave_direction = 1
+wave_speed = 0.1
+
+# PWM objects for button LEDs
+button_pwms = []
+
+def init_button_pwms():
+    """Initialize PWM for button LEDs"""
+    global button_pwms
+    if not button_pwms:  # Only initialize once
+        try:
+            # Inky Frame button LED pin assignments (based on hardware)
+            button_led_pins = [11, 12, 13, 14, 15]  # Pins for buttons A, B, C, D, E
+            button_pwms = [PWM(Pin(pin)) for pin in button_led_pins]
+            for pwm in button_pwms:
+                pwm.freq(1000)  # 1kHz frequency
+                pwm.duty_u16(0)  # Start with LEDs off
+            inky_helper_logger.debug(f"Initialized PWM for {len(button_pwms)} button LEDs")
+        except Exception as e:
+            inky_helper_logger.error(f"Failed to initialize button PWMs: {e}")
+            # Fallback to regular LED control
+            button_pwms = []
 
 def wave_led_callback(t):
-    """Creates a wave pattern across buttons A through E"""
-    global wave_step, wave_direction
+    """Creates a smooth PWM wave pattern across buttons A through E"""
+    global wave_position, wave_direction
     
-    # Clear all LEDs first
-    clear_button_leds()
-    
-    # Light up LEDs in a wave pattern
-    buttons = [inky_frame.button_a, inky_frame.button_b, inky_frame.button_c, inky_frame.button_d, inky_frame.button_e]
-    
-    # Create wave effect - light up 2-3 LEDs at a time
-    for i in range(len(buttons)):
-        distance = abs(i - wave_step)
-        if distance <= 1:  # Light up current and adjacent LEDs
-            buttons[i].led_on()
+    if not button_pwms:
+        # Fallback to simple on/off pattern if PWM failed
+        clear_button_leds()
+        buttons = [inky_frame.button_a, inky_frame.button_b, inky_frame.button_c, inky_frame.button_d, inky_frame.button_e]
+        step = int(wave_position)
+        for i in range(len(buttons)):
+            distance = abs(i - step)
+            if distance <= 1:
+                buttons[i].led_on()
+    else:
+        # PWM wave pattern
+        import math
+        for i, pwm in enumerate(button_pwms):
+            # Calculate distance from wave center
+            distance = abs(i - wave_position)
+            
+            # Create a smooth wave with gaussian-like falloff
+            if distance <= 2.0:  # Wave width of 4 LEDs
+                # Use cosine for smooth wave shape
+                brightness = math.cos(distance * math.pi / 4) ** 2
+                brightness = max(0, brightness)  # Ensure non-negative
+                duty = int(brightness * 65535)  # Convert to 16-bit duty cycle
+                pwm.duty_u16(duty)
+            else:
+                pwm.duty_u16(0)  # Turn off distant LEDs
     
     # Move wave position
-    wave_step += wave_direction
-    if wave_step >= len(buttons) - 1:
+    wave_position += wave_direction * wave_speed
+    if wave_position >= 4.0:  # 5 buttons (0-4)
         wave_direction = -1
-    elif wave_step <= 0:
+    elif wave_position <= 0.0:
         wave_direction = 1
 
 def start_wave_pattern():
-    """Start the wave LED pattern"""
+    """Start the PWM wave LED pattern"""
     inky_helper_logger.debug("start_wave_pattern called")
-    global wave_step, wave_direction
-    wave_step = 0
+    global wave_position, wave_direction
+    wave_position = 0.0
     wave_direction = 1
+    
+    # Initialize PWM if not already done
+    init_button_pwms()
+    
     wave_timer.deinit()
-    wave_timer.init(period=200, mode=Timer.PERIODIC, callback=wave_led_callback)
+    wave_timer.init(period=50, mode=Timer.PERIODIC, callback=wave_led_callback)
 
 def stop_wave_pattern():
     """Stop the wave LED pattern and clear all LEDs"""
     inky_helper_logger.debug("stop_wave_pattern called")
     wave_timer.deinit()
+    
+    # Turn off PWM LEDs
+    if button_pwms:
+        for pwm in button_pwms:
+            pwm.duty_u16(0)
+    
+    # Also clear regular LEDs as fallback
     clear_button_leds()
 
 

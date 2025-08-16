@@ -46,19 +46,15 @@ class DailySofterWorldApp(InkyAppBase):
 
     def download_comic(self, comic_num):
         """Download a specific comic by number"""
-        # Generate URL based on display type with proper Flask server endpoint format
-        if self.display_type == "5.7":
-            # Use specific comic with 600x448 dimensions for 5.7" display
-            url = f"{self.flask_base_url}/comic/{comic_num}/600x448"
-        elif self.display_type == "4.0":
-            # Use specific comic with 640x400 dimensions for 4.0" display
-            url = f"{self.flask_base_url}/comic/{comic_num}/640x400"
-        elif self.display_type == "7.3":
-            # Use specific comic with 800x480 dimensions for 7.3" display
-            url = f"{self.flask_base_url}/comic/{comic_num}/800x480"
+        # Generate URL with query parameters for dimensions
+        base_url = f"{self.flask_base_url}/comic/{comic_num}"
+        
+        # Add width and height query parameters using actual display dimensions
+        if self.width and self.height:
+            url = f"{base_url}?width={self.width}&height={self.height}"
         else:
-            # Default: just get the comic without custom dimensions
-            url = f"{self.flask_base_url}/comic/{comic_num}"
+            # Default: use endpoint without custom dimensions
+            url = base_url
         
         self.logger.info(f"Downloading comic {comic_num} from {url}")
         try:
