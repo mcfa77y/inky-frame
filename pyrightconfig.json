@@ -1,0 +1,18 @@
+{
+    "include": [
+        "."
+    ],
+    "exclude": [
+        "**/__pycache__",
+        ".venv*"
+    ],
+    "stubPath": "./typings",
+    "typeCheckingMode": "basic",
+    "reportMissingImports": "none",
+    "reportMissingTypeStubs": "none",
+    "reportUnknownMemberType": "none",
+    "reportUnknownArgumentType": "none",
+    "reportUnknownVariableType": "none",
+    "reportAttributeAccessIssue": "warning",
+    "pythonVersion": "3.11"
+}

@@ -1,5 +1,5 @@
 import gc
-from urllib import urequest
+from urllib import urequest  # type: ignore[attr-defined]
 
 import jpegdec
 from ujson import load
@@ -37,23 +37,24 @@ class NasaApodApp(InkyAppBase):
         # Fetch APOD title from API
         try:
             print("Fetching APOD title from API...")
-            
+
             # Use a similar approach to news_headlines.py
             response = urequest.urlopen(API_URL)
-            json_data = response.read(1024*4)  # Read a reasonable chunk of data
+            # Read a reasonable chunk of data
+            json_data = response.read(1024*4)
             self.logger.debug(json_data)
             response.close()
-            
+
             # Parse the JSON to extract the title
             json_str = json_data.decode('utf-8')
-            
+
             # Simple string parsing to extract title
-            title_start = json_str.find('"title":') 
+            title_start = json_str.find('"title":')
             if title_start > 0:
                 # Move past the "title": part
                 title_start = json_str.find('"', title_start + 8) + 1
                 title_end = json_str.find('"', title_start)
-                
+
                 if title_start > 0 and title_end > title_start:
                     self.apod_title = json_str[title_start:title_end]
                     print(f"Updated title: {self.apod_title}")
@@ -67,7 +68,7 @@ class NasaApodApp(InkyAppBase):
                 self.logger.debug(json_str)
                 # Fallback to a default title
                 self.apod_title = "NASA Astronomy Picture of the Day"
-            
+
             gc.collect()  # Clean up memory
         except Exception as e:
             print(f"Error fetching APOD data: {e}")

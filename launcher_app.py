@@ -1,8 +1,6 @@
 
 import time
-
 from machine import reset
-
 import inky_helper as inky_utils
 from inky_app_base import InkyAppBase
 

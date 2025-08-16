@@ -20,7 +20,7 @@ class Logger:
             merged_context.update(context)
         context_str = ""
         if merged_context:
-            context_str = " | " + \n                " ".join(f"{k}={v}" for k, v in merged_context.items())
+            context_str = " | " + "\n".join(f"{k}={v}" for k, v in merged_context.items())
         msg = f"[{timestamp}] [{level}]{context_str}: {message}"
         print(msg, file=sys.stderr if level in (
             "ERROR", "WARNING") else sys.stdout)

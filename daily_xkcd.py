@@ -9,7 +9,7 @@ import uos
 from inky_app_base import InkyAppBase
 
 FILENAME = "/sd/xkcd-daily.jpg"
-ENDPOINT = "https://pimoroni.github.io/feed2image/xkcd-daily.jpg"
+IMAGE_URL = "https://pimoroni.github.io/feed2image/xkcd-daily.jpg"
 
 
 class DailyXkcdApp(InkyAppBase):
@@ -37,7 +37,7 @@ class DailyXkcdApp(InkyAppBase):
         elif self.display_type == "7.3":
             self.img_url = "https://pimoroni.github.io/feed2image/xkcd-800x480-daily.jpg"
         else:
-            self.img_url = ENDPOINT
+            self.img_url = IMAGE_URL
 
     def teardown(self):
         # Optionally unmount SD or cleanup
@@ -46,7 +46,7 @@ class DailyXkcdApp(InkyAppBase):
         self.img_url = None
 
     def update(self):
-        url = self.img_url or ENDPOINT
+        url = self.img_url or IMAGE_URL
         try:
             socket = urequest.urlopen(url)
             data = bytearray(1024)
@@ -76,7 +76,7 @@ class DailyXkcdApp(InkyAppBase):
         self.graphics.update()
 
     @property
-    def update_interval(self):
+    def update_interval(self) -> int:
         return 240
 
 

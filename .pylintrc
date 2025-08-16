@@ -1,0 +1,61 @@
+[MAIN]
+# Add the typings directory to the Python path so Pylint can find type stubs
+init-hook='import sys; sys.path.append("./typings")'
+
+# Specify additional paths to search for modules
+extension-pkg-allow-list=
+
+[MESSAGES CONTROL]
+# Disable import-related warnings for MicroPython modules that have type stubs
+disable=
+    import-error,
+    no-name-in-module,
+    unused-import
+
+# Enable specific checks you want to keep
+enable=
+    useless-suppression,
+    deprecated-pragma
+
+[TYPECHECK]
+# List of module names for which member attributes should not be checked
+ignored-modules=
+    machine,
+    network,
+    inky_frame,
+    picographics,
+    jpegdec,
+    sdcard,
+    uos,
+    pcf85063a,
+    pimoroni_i2c,
+    ntptime,
+    qrcode,
+    framebuf,
+    micropython,
+    gc
+
+# List of class names for which member attributes should not be checked
+ignored-classes=
+    Pin,
+    PWM,
+    Timer,
+    RTC,
+    SPI,
+    PicoGraphics,
+    JPEG,
+    SDCard
+
+# Generate reports
+reports=no
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=100
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of locals for function / method body
+max-locals=20

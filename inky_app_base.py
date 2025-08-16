@@ -48,6 +48,6 @@ class InkyAppBase:
         raise NotImplementedError("draw() must be implemented by subclass")
 
     @property
-    def update_interval(self):
+    def update_minute_interval(self) -> int:
         """Return the update interval in minutes (override in subclass if needed)."""
         return 10

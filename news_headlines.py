@@ -1,5 +1,5 @@
 import gc
-from urllib import urequest
+from urllib import urequest  # type: ignore[attr-defined]
 
 import qrcode
 

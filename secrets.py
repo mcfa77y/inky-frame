@@ -1,3 +1,5 @@
-# secrets.py should contain:
-WIFI_SSID = "#super_mario"
-WIFI_PASSWORD = "hotokrapickles1410"
+# Mock secrets file for local development
+# In the actual MicroPython environment, this would contain real WiFi credentials
+
+WIFI_SSID = "mock_wifi_network"
+WIFI_PASSWORD = "mock_password"

@@ -1,4 +1,20 @@
 {
-  "workbench.colorTheme": "Solarized Light",
+  "workbench.colorTheme": "Default Dark+",
+  "circuitpython.board.version": null,
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingModuleSource": "none",
+    "reportMissingImports": "none",
+    "reportUnknownMemberType": "none"
+  },
+  "python.analysis.typeshedPaths": [
+    "${workspaceFolder}/typings/"
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv-pimaroni-inky-frame/bin/python",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.autoSearchPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/typings"
+  ],
   "python.languageServer": "None"
 }

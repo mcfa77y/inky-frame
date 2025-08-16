@@ -9,10 +9,11 @@
     }
   ],
   "settings": {
-    "workbench.colorTheme": "Solarized Light",
-    "python.languageServer": "None",
+    "workbench.colorTheme": "Solarized Dark",
+    "python.languageServer": "Pylance",
     "circuitpython.board.version": null,
     "circuitpython.board.vid": "0x16D0",
-    "circuitpython.board.pid": "0x08C8"
+    "circuitpython.board.pid": "0x08C8",
+    "windsurfPyright.disableLanguageServices": true
   }
 }

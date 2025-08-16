@@ -2,6 +2,8 @@ import json
 import math
 import os
 import time
+from secrets import (WIFI_PASSWORD,  # pylint: disable=no-name-in-module
+                     WIFI_SSID)
 
 import inky_frame
 import network
@@ -60,7 +62,7 @@ def network_led_callback(t):
 def pulse_network_led(speed_hz=1):
     inky_helper_logger.debug(
         f"pulse_network_led called with speed_hz={speed_hz}")
-    global network_led_timer, network_led_pulse_speed_hz
+    global network_led_pulse_speed_hz
     network_led_pulse_speed_hz = speed_hz
     network_led_timer.deinit()
     network_led_timer.init(period=50, mode=Timer.PERIODIC,
@@ -70,9 +72,52 @@ def pulse_network_led(speed_hz=1):
 # turn off the network led and disable any pulsing animation that's running
 def stop_network_led():
     inky_helper_logger.debug("stop_network_led called")
-    global network_led_timer
     network_led_timer.deinit()
     network_led_pwm.duty_u16(0)
+
+
+# Wave light pattern for button LEDs
+wave_timer = Timer(-1)
+wave_step = 0
+wave_direction = 1
+
+def wave_led_callback(t):
+    """Creates a wave pattern across buttons A through E"""
+    global wave_step, wave_direction
+    
+    # Clear all LEDs first
+    clear_button_leds()
+    
+    # Light up LEDs in a wave pattern
+    buttons = [inky_frame.button_a, inky_frame.button_b, inky_frame.button_c, inky_frame.button_d, inky_frame.button_e]
+    
+    # Create wave effect - light up 2-3 LEDs at a time
+    for i in range(len(buttons)):
+        distance = abs(i - wave_step)
+        if distance <= 1:  # Light up current and adjacent LEDs
+            buttons[i].led_on()
+    
+    # Move wave position
+    wave_step += wave_direction
+    if wave_step >= len(buttons) - 1:
+        wave_direction = -1
+    elif wave_step <= 0:
+        wave_direction = 1
+
+def start_wave_pattern():
+    """Start the wave LED pattern"""
+    inky_helper_logger.debug("start_wave_pattern called")
+    global wave_step, wave_direction
+    wave_step = 0
+    wave_direction = 1
+    wave_timer.deinit()
+    wave_timer.init(period=200, mode=Timer.PERIODIC, callback=wave_led_callback)
+
+def stop_wave_pattern():
+    """Stop the wave LED pattern and clear all LEDs"""
+    inky_helper_logger.debug("stop_wave_pattern called")
+    wave_timer.deinit()
+    clear_button_leds()
 
 
 def sleep(minutes: int):
@@ -100,8 +145,10 @@ def clear_button_leds():
     inky_frame.button_e.led_off()
 
 
-def network_connect(SSID, PSK):
-    inky_helper_logger.debug(f"network_connect called with SSID={SSID}")
+def network_connect():
+    ssid = WIFI_SSID
+    password = WIFI_PASSWORD
+    inky_helper_logger.debug(f"network_connect called with SSID={ssid}")
     # Enable the Wireless
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -112,7 +159,7 @@ def network_connect(SSID, PSK):
     # Sets the Wireless LED pulsing and attempts to connect to your local network.
     pulse_network_led()
     wlan.config(pm=0xa11140)  # Turn WiFi power saving off for some slow APs
-    wlan.connect(SSID, PSK)
+    wlan.connect(ssid, password)
     inky_helper_logger.debug("Attempting WiFi connection")
 
     while max_wait > 0:
