@@ -49,7 +49,7 @@ class WeatherApp(InkyAppBase):
     def download_weather(self, zipcode, view_type="current"):
         """Download weather image for specified zipcode and view type"""
         # Generate URL for weather endpoint with display-specific dimensions
-        base_url = f"{self.flask_base_url}/weather/{zipcode}"
+        base_url = f"{self.flask_base_url}/weather/apple/{zipcode}"
         
         if view_type == "current":
             endpoint = f"{base_url}/current"
@@ -112,15 +112,6 @@ class WeatherApp(InkyAppBase):
         current_view = self.weather_views[self.current_view_index]
         self.logger.info(f"Refreshing {current_view} weather view")
         self.download_weather(self.zipcode, current_view)
-
-    # Compatibility methods for interactive main.py navigation
-    def next_comic(self):
-        """Alias for next_weather_view() for main.py compatibility"""
-        self.next_weather_view()
-
-    def previous_comic(self):
-        """Alias for previous_weather_view() for main.py compatibility"""
-        self.previous_weather_view()
 
     def draw(self):
         gc.collect()

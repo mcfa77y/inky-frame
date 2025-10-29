@@ -10,7 +10,8 @@ import uos
 from inky_app_base import InkyAppBase
 
 FILENAME = "/sd/softer-world-daily.jpg"
-FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"
+# SERVER_BASE_URL = "https://saved-heron-driving.ngrok-free.app"
+SERVER_BASE_URL = "http://181.41.202.117:33337"
 
 
 class DailySofterWorldApp(InkyAppBase):
@@ -33,7 +34,7 @@ class DailySofterWorldApp(InkyAppBase):
             pass  # Already mounted or error
         gc.collect()
         # Set base URL for Flask server - we'll add comic number and dimensions in update()
-        self.flask_base_url = FLASK_SERVER_BASE
+        self.flask_base_url = SERVER_BASE_URL
 
     def teardown(self):
         # Optionally unmount SD or cleanup
@@ -71,6 +72,7 @@ class DailySofterWorldApp(InkyAppBase):
         except Exception as e:
             self.logger.error(f"Error downloading Softer World image: {e}")
             self.show_error("Unable to download Softer World image!")
+        self.logger.info(f"Downloaded comic {comic_num}")
 
     def next_comic(self):
         """Go to the next comic"""
