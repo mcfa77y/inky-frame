@@ -1,7 +1,7 @@
 # Type stub for urllib module with MicroPython's urequest
 # This helps IDEs and type checkers understand the mocked urequest module
 
-from typing import Any, Optional, Dict, Union
+from typing import Any, Optional, Dict
 
 class urequest:
     @staticmethod

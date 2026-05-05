@@ -1,5 +1,5 @@
 {
-  "workbench.colorTheme": "Default High Contrast",
+  "workbench.colorTheme": "Abyss",
   "circuitpython.board.version": null,
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.diagnosticSeverityOverrides": {
@@ -16,5 +16,5 @@
     "${workspaceFolder}",
     "${workspaceFolder}/typings"
   ],
-  "python.languageServer": "Pylance"
+  "python.languageServer": "None"
 }

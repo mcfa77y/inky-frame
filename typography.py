@@ -71,7 +71,7 @@ class TypographyApp(InkyAppBase):
 
     def button_c_press(self):
         """Button C: Refresh current weather view"""
-        self.logger.info(f"Refreshing typography sheet")
+        self.logger.info("Refreshing typography sheet")
         self.download_image()
 
     def draw(self):

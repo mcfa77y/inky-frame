@@ -2,7 +2,6 @@ import gc
 from urllib import urequest  # type: ignore[attr-defined]
 
 import jpegdec
-from ujson import load
 
 from inky_app_base import InkyAppBase
 

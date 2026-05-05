@@ -86,7 +86,7 @@ def measure_qr_code(size, code):
     return module_size * w, module_size
 
 
-def draw_qr_code(ox, oy, size, code):
+def draw_qr_code(graphics, ox, oy, size, code):
     size, module_size = measure_qr_code(size, code)
     graphics.set_pen(1)
     graphics.rectangle(ox, oy, size, size)
@@ -160,9 +160,9 @@ class NewsHeadlinesApp(InkyAppBase):
                 feed[1]["title"]) < width else 340, width - 145, 2)
             g.line(10, 215, width - 10, 215)
             self.code.set_text(feed[0]["guid"])
-            draw_qr_code(width - 110, 65, 100, self.code)
+            draw_qr_code(g, width - 110, 65, 100, self.code)
             self.code.set_text(feed[1]["guid"])
-            draw_qr_code(10, 265, 100, self.code)
+            draw_qr_code(g, 10, 265, 100, self.code)
             g.set_pen(g.create_pen(200, 0, 0))
             g.rectangle(0, height - 20, width, 20)
         else:
