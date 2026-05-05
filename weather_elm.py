@@ -6,7 +6,6 @@ with lifecycle hooks for better maintainability and testability.
 """
 
 import gc
-import time
 from urllib import urequest
 
 import jpegdec
@@ -14,14 +13,14 @@ import machine
 import sdcard
 import uos
 
-from elm_events import ButtonEvent, HomeEvent, NavigationEvent, RefreshEvent, TimerEvent
+from elm_events import ButtonEvent, NavigationEvent
 from elm_inky_app_base import ElmInkyAppBase
-from weather_model import WeatherModel
 from Timer import Timer
+from weather_model import WeatherModel
 
 FILENAME = "/sd/weather-daily.jpg"
 FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"
-DEFAULT_ZIPCODE = "94102"  # San Francisco default
+DEFAULT_ZIPCODE = "94110"  # San Francisco default
 
 
 class WeatherAppElm(ElmInkyAppBase):
@@ -70,22 +69,6 @@ class WeatherAppElm(ElmInkyAppBase):
         """Cleanup on app exit."""
         self.sd = None
         self.sd_spi = None
-
-    def update(self, model: WeatherModel, event) -> WeatherModel:
-        """Pure function: return new Model based on current Model and Event."""
-        if isinstance(event, ButtonEvent):
-            return self._handle_button_event(model, event)
-        elif isinstance(event, NavigationEvent):
-            return self._handle_navigation_event(model, event)
-        elif isinstance(event, RefreshEvent):
-            return self._handle_refresh_event(model)
-        elif isinstance(event, HomeEvent):
-            # Return to launcher - this will be handled by main loop
-            return model
-        elif isinstance(event, TimerEvent):
-            return self._handle_timer_event(model)
-
-        return model
 
     def _handle_button_event(self, model: WeatherModel, event: ButtonEvent) -> WeatherModel:
         """Handle button press events."""

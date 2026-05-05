@@ -6,7 +6,8 @@ building predictable, testable Inky Frame applications.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Any, Optional
+
 from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY
 from picographics import PicoGraphics
 
@@ -31,10 +32,22 @@ class ElmInkyAppBase(ABC):
         """Initialize the initial Model state."""
         pass
 
-    @abstractmethod
     def update(self, model: Any, event: Any) -> Any:
-        """Pure function: return new Model based on current Model and Event."""
-        pass
+        """Pure function: return new Model based on current Model and Event.
+        
+        Default implementation dispatches to specific handler methods based on event type.
+        Override for custom event handling logic.
+        """
+        # Try to dispatch to handler method based on event type
+        event_type_name = event.__class__.__name__
+        handler_name = f"_handle_{event_type_name.lower()}_event"
+        
+        if hasattr(self, handler_name):
+            handler = getattr(self, handler_name)
+            return handler(model, event)
+        
+        # If no specific handler, return model unchanged
+        return model
 
     @abstractmethod
     def view(self, model: Any) -> None:
