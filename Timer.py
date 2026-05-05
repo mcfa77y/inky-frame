@@ -36,6 +36,7 @@ class Timer:
     def pause(self) -> None:
         """Pause the timer, preserving elapsed time."""
         if self._is_running and not self._is_paused:
+            assert self._start_time is not None
             self._elapsed = time.time() - self._start_time
             self._is_paused = True
             self._is_running = False
@@ -68,6 +69,7 @@ class Timer:
             Elapsed time in seconds since start (or since pause).
         """
         if self._is_running:
+            assert self._start_time is not None
             return time.time() - self._start_time
         return self._elapsed
     
