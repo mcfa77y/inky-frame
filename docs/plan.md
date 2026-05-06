@@ -277,11 +277,12 @@ def view(self, model: WeatherModel) -> None:
    - Added `RefreshEvent` and `NavigationEvent` for convenience
    - File: `elm_events.py`
 
-3. **Update main loop** ⏳ IN PROGRESS
-   - Refactor `main.py` to use event-driven architecture
-   - Remove direct button handler calls
-   - Implement event queue processing
-   - Remove `state.json` dependency, default to Weather app on boot
+3. **Update main loop** ✅ COMPLETED
+   - Refactored `main.py` to use event-driven architecture
+   - Removed direct button handler calls
+   - Implemented ButtonEvent dispatching for ELM apps
+   - Removed `state.json` dependency, defaults to Weather app on boot
+   - Maintains backward compatibility with legacy apps
 
 ### Phase 2: Refactor Existing Apps (Week 3-4)
 
@@ -290,7 +291,8 @@ def view(self, model: WeatherModel) -> None:
    - Implemented pure update function with event handling
    - Implemented pure view function
    - Added lifecycle hooks implementation
-   - Files: `weather_model. ⏳ PENDINGpy`, `weather_elm.py`
+   - Integrated Timer class for periodic updates
+   - Files: `weather_model.py`, `weather_elm.py`
 
 5. **Refactor LauncherApp**
    - Extract Model (menu items, selection state)
