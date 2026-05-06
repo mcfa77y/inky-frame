@@ -7,7 +7,7 @@ Defines unified event types for all interactions in Inky Frame apps.
 
 class ButtonEvent:
     """Event triggered when a button is pressed."""
-    def __init__(self, button: str):
+    def __init__(self, button):
         self.button = button  # 'a', 'b', 'c', 'd', 'e'
 
     def __repr__(self):
@@ -22,7 +22,7 @@ class TimerEvent:
 
 class NetworkEvent:
     """Event triggered when network data arrives."""
-    def __init__(self, data: dict):
+    def __init__(self, data):
         self.data = data
 
     def __repr__(self):
@@ -43,7 +43,7 @@ class RefreshEvent:
 
 class NavigationEvent:
     """Event triggered for navigation (next/previous)."""
-    def __init__(self, direction: str):
+    def __init__(self, direction):
         self.direction = direction  # 'next' or 'previous'
 
     def __repr__(self):

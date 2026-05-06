@@ -11,13 +11,13 @@ class WeatherModel:
 
     def __init__(
         self,
-        zipcode: str,
-        current_view_index: int,
-        weather_views: list,
-        image_path: str,
-        last_update_time: int,
-        is_loading: bool,
-        error_message: str = ""
+        zipcode,
+        current_view_index,
+        weather_views,
+        image_path,
+        last_update_time,
+        is_loading,
+        error_message=""
     ):
         self.zipcode = zipcode
         self.current_view_index = current_view_index
@@ -33,7 +33,7 @@ class WeatherModel:
                 f"is_loading={self.is_loading}, "
                 f"error_message='{self.error_message}')")
 
-    def with_view_index(self, new_index: int) -> 'WeatherModel':
+    def with_view_index(self, new_index):
         """Return a new WeatherModel with updated view index."""
         return WeatherModel(
             zipcode=self.zipcode,
@@ -45,7 +45,7 @@ class WeatherModel:
             error_message=self.error_message
         )
 
-    def with_loading(self, loading: bool) -> 'WeatherModel':
+    def with_loading(self, loading):
         """Return a new WeatherModel with updated loading state."""
         return WeatherModel(
             zipcode=self.zipcode,
@@ -57,7 +57,7 @@ class WeatherModel:
             error_message=self.error_message
         )
 
-    def with_error(self, error_message: str) -> 'WeatherModel':
+    def with_error(self, error_message):
         """Return a new WeatherModel with updated error message."""
         return WeatherModel(
             zipcode=self.zipcode,
@@ -69,7 +69,7 @@ class WeatherModel:
             error_message=error_message
         )
 
-    def with_update_time(self, timestamp: int) -> 'WeatherModel':
+    def with_update_time(self, timestamp):
         """Return a new WeatherModel with updated last_update_time."""
         return WeatherModel(
             zipcode=self.zipcode,

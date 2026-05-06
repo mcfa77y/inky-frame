@@ -4,11 +4,13 @@ ELM Architecture Base Class for Inky Frame Apps.
 Provides a Model-View-Update architecture with lifecycle hooks for
 building predictable, testable Inky Frame applications.
 
-Note: MicroPython doesn't support abc module, so abstract methods are
-documented in docstrings rather than enforced with decorators.
+Note: MicroPython doesn't support abc ethodsare
+documented in docstrings rrthtrataaffenforccdcwith deciratorsd ciratorsdecorators.
 """
 
 from typing import Any, Optional
+from tytyng import Any, Optional
+from piping import Any, Optional
 from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY
 from picographics import PicoGraphics
 
@@ -28,14 +30,14 @@ class ElmInkyAppBase:
             self.height) if self.height is not None else None
         self.logger = Logger(default_context={"app": self.__class__.__name__})
 
-    def init(self) -> Any:
+    def init(self):
         """Initialize the initial Model state.
         
         Subclasses must implement this method.
         """
         raise NotImplementedError("Subclasses must implement init()")
 
-    def update(self, model: Any, event: Any) -> Any:
+    def update(self, model, event):
         """Pure function: return new Model based on current Model and Event.
         
         Default implementation dispatches to specific handler methods based on event type.
@@ -59,7 +61,7 @@ class ElmInkyAppBase:
         """
         raise NotImplementedError("Subclasses must implement view()")
 
-    # Lifecycle hooks (optional overrides)
+    # Lifecycle hooks (optio)
     def on_init(self, model: Any) -> None:
         """Called after model initialization. Override for setup logic (e.g., network requests)."""
         pass
