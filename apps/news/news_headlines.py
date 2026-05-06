@@ -3,7 +3,7 @@ from urllib import urequest  # type: ignore[attr-defined]
 
 import qrcode
 
-from inky_app_base import InkyAppBase
+from core.inky_app_base import InkyAppBase
 
 # Uncomment one URL to use (Top Stories, World News and technology)
 # URL = "https://feeds.bbci.co.uk/news/rss.xml"

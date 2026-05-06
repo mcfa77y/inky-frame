@@ -2,8 +2,7 @@ import json
 import math
 import os
 import time
-from secrets import (WIFI_PASSWORD,  # pylint: disable=no-name-in-module
-                     WIFI_SSID)
+from secrets import WIFI_PASSWORD, WIFI_SSID  # pylint: disable=no-name-in-module
 
 import inky_frame
 import network
@@ -11,7 +10,7 @@ from machine import PWM, Pin, Timer
 from pcf85063a import PCF85063A
 from pimoroni_i2c import PimoroniI2C
 
-from logger import Logger
+from .logger import Logger
 
 inky_helper_logger = Logger(default_context={"app": "inky_helper"})
 

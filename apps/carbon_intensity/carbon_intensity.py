@@ -14,7 +14,7 @@ Make sure to uncomment the correct size for your display!
 import inky_frame
 import urequests
 
-from inky_app_base import InkyAppBase
+from core.inky_app_base import InkyAppBase
 
 POSTCODE = "S9"
 URL = "https://api.carbonintensity.org.uk/regional/postcode/" + str(POSTCODE)

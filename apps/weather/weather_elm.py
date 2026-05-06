@@ -13,10 +13,10 @@ import machine
 import sdcard
 import uos
 
-from elm_events import ButtonEvent, NavigationEvent
-from elm_inky_app_base import ElmInkyAppBase
-from Timer import Timer
-from weather_model import WeatherModel
+from core.elm_events import ButtonEvent, NavigationEvent
+from core.elm_inky_app_base import ElmInkyAppBase
+from models.weather_model import WeatherModel
+from utils.Timer import Timer
 
 FILENAME = "/sd/weather-daily.jpg"
 FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"

@@ -1,8 +1,10 @@
 
 import time
+
 from machine import reset
-import inky_helper as inky_utils
-from inky_app_base import InkyAppBase
+
+import core.inky_helper as inky_utils
+from core.inky_app_base import InkyAppBase
 
 
 def handle_launcher_selection(button, app_name):

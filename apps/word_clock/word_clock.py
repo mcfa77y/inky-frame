@@ -3,7 +3,7 @@ import time
 import machine
 import ntptime
 
-from inky_app_base import InkyAppBase
+from core.inky_app_base import InkyAppBase
 
 
 def set_time_with_retries(rtc, retries=3):

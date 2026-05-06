@@ -2,10 +2,11 @@ import gc
 import time
 
 import inky_frame
-import inky_helper as inky_utils
-from launcher_app import app as launcherApp
-from logger import Logger
-from elm_events import ButtonEvent
+
+import core.inky_helper as inky_utils
+from apps.launcher.launcher_app import app as launcherApp
+from core.elm_events import ButtonEvent
+from core.logger import Logger
 
 main_logger = Logger(default_context={"app": "main"})
 
@@ -90,7 +91,7 @@ def main():
     inky_utils.led_warn.off()
 
     # Default to Weather app on boot (no state.json dependency)
-    from weather_elm import app as weatherApp
+    from apps.weather.weather_elm import app as weatherApp
     inky_utils.app = weatherApp
     main_logger.info("Defaulting to Weather app on boot")
     

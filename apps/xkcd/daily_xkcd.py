@@ -6,13 +6,13 @@ import machine
 import sdcard
 import uos
 
-from inky_app_base import InkyAppBase
+from core.inky_app_base import InkyAppBase
 
-FILENAME = "/sd/typography-sheet.jpg"
-FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"
+FILENAME = "/sd/xkcd-daily.jpg"
+IMAGE_URL = "https://pimoroni.github.io/feed2image/xkcd-daily.jpg"
 
 
-class TypographyApp(InkyAppBase):
+class DailyXkcdApp(InkyAppBase):
     def __init__(self):
         super().__init__()
         self.sd = None
@@ -29,8 +29,15 @@ class TypographyApp(InkyAppBase):
             self.logger.error(f"Unable to mount SD card: {e}")
             pass  # Already mounted or error
         gc.collect()
-        # Set base URL for Flask server - we'll add weather endpoints in update()
-        self.flask_base_url = FLASK_SERVER_BASE
+        # Set image URL based on display type
+        if self.display_type == "5.7":
+            self.img_url = "https://pimoroni.github.io/feed2image/xkcd-daily.jpg"
+        elif self.display_type == "4.0":
+            self.img_url = "https://pimoroni.github.io/feed2image/xkcd-640x400-daily.jpg"
+        elif self.display_type == "7.3":
+            self.img_url = "https://pimoroni.github.io/feed2image/xkcd-800x480-daily.jpg"
+        else:
+            self.img_url = IMAGE_URL
 
     def teardown(self):
         # Optionally unmount SD or cleanup
@@ -39,21 +46,7 @@ class TypographyApp(InkyAppBase):
         self.img_url = None
 
     def update(self):
-        self.download_image()
-
-    def download_image(self):
-        """Download weather image for specified zipcode and view type"""
-        # Generate URL for weather endpoint with display-specific dimensions
-        endpoint = f"{self.flask_base_url}/typography/sheet"
-        
-        
-        # Add width and height query parameters using actual display dimensions
-        if self.width and self.height:
-            url = f"{endpoint}?width={self.width}&height={self.height}"
-        else:
-            # Default: use endpoint without custom dimensions
-            url = endpoint
-        
+        url = self.img_url or IMAGE_URL
         try:
             socket = urequest.urlopen(url)
             data = bytearray(1024)
@@ -66,13 +59,8 @@ class TypographyApp(InkyAppBase):
             del data
             gc.collect()
         except Exception as e:
-            self.logger.error(f"Error downloading typography sheet: {e}")
-            self.show_error("Unable to download typography sheet!")
-
-    def button_c_press(self):
-        """Button C: Refresh current weather view"""
-        self.logger.info("Refreshing typography sheet")
-        self.download_image()
+            self.logger.error(f"Error downloading XKCD image: {e}")
+            self.show_error("Unable to download XKCD image!")
 
     def draw(self):
         gc.collect()
@@ -83,14 +71,14 @@ class TypographyApp(InkyAppBase):
             jpeg.open_file(FILENAME)
             jpeg.decode()
         except Exception as e:
-            self.logger.error(f"Error decoding/displaying typography sheet: {e}")
-            self.show_error("Unable to display typography sheet!")
+            self.logger.error(f"Error decoding/displaying XKCD image: {e}")
+            self.show_error("Unable to display XKCD image!")
         self.graphics.update()
 
     @property
-    def update_minute_interval(self) -> int:
-        return 30  # Update typography sheet every 30 minutes
+    def update_interval(self) -> int:
+        return 240
 
 
 # Module-level app instance for compatibility
-app = TypographyApp()
+app = DailyXkcdApp()

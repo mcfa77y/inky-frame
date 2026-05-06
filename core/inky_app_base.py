@@ -1,8 +1,8 @@
 from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY  # 7.3"
 from picographics import PicoGraphics
 
-from inky_helper import get_inky_frame_type
-from logger import Logger
+from .inky_helper import get_inky_frame_type
+from .logger import Logger
 
 
 class InkyAppBase:

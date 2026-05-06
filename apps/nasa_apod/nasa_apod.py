@@ -3,7 +3,7 @@ from urllib import urequest  # type: ignore[attr-defined]
 
 import jpegdec
 
-from inky_app_base import InkyAppBase
+from core.inky_app_base import InkyAppBase
 
 gc.collect()
 

@@ -6,7 +6,7 @@ import machine
 import sdcard
 import uos
 
-from inky_app_base import InkyAppBase
+from core.inky_app_base import InkyAppBase
 
 FILENAME = "/sd/weather-daily.jpg"
 FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"

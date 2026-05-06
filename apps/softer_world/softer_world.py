@@ -1,13 +1,13 @@
 import gc
-import urandom
 from urllib import urequest
 
 import jpegdec
 import machine
 import sdcard
 import uos
+import urandom
 
-from inky_app_base import InkyAppBase
+from core.inky_app_base import InkyAppBase
 
 FILENAME = "/sd/softer-world-daily.jpg"
 # SERVER_BASE_URL = "https://saved-heron-driving.ngrok-free.app"

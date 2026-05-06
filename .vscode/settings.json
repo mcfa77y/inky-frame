@@ -16,5 +16,15 @@
     "${workspaceFolder}",
     "${workspaceFolder}/typings"
   ],
-  "python.languageServer": "None"
+  "python.languageServer": "None",
+  "micropico.pyIgnore": ".git,.venv-pimaroni-inky-frame,.vscode,__pycache__,*.pyc,typings",
+  "files.exclude": {
+      ".venv-*": true,       // Excludes python virtual environments
+      ".git": true,          // Excludes git directory
+      ".vscode": true,       // Excludes VS Code directory
+      "typings": true,       // Excludes typings directory
+      "__pycache__": true,   // Excludes python cache
+      "build": true,         // Excludes build artifacts
+      ".ruff_cache": true    // Excludes ruff cache
+    }
 }

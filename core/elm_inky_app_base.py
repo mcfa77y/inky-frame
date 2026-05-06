@@ -4,18 +4,14 @@ ELM Architecture Base Class for Inky Frame Apps.
 Provides a Model-View-Update architecture with lifecycle hooks for
 building predictable, testable Inky Frame applications.
 
-Note: MicroPython doesn't support abc ethodsare
-documented in docstrings rrthtrataaffenforccdcwith deciratorsd ciratorsdecorators.
+Note: MicroPython doesn't support abc methods. They are documented in docstrings for clarity and compatibility with CircuitPython.
 """
 
-from typing import Any, Optional
-from tytyng import Any, Optional
-from piping import Any, Optional
 from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY
 from picographics import PicoGraphics
 
-from inky_helper import get_inky_frame_type
-from logger import Logger
+from .inky_helper import get_inky_frame_type
+from .logger import Logger
 
 
 class ElmInkyAppBase:
