@@ -1,5 +1,85 @@
 # ELM Architecture Refactoring Plan
 
+## Project Folder Structure
+
+The project has been reorganized following MicroPython best practices with proper package structure:
+
+```
+inky-frame/
+├── main.py                  # Entry point (required at root)
+├── boot.py                  # Boot script (optional)
+├── secrets.py               # Sensitive data (API keys, WiFi credentials)
+├── lib/                     # Third-party libraries/modules
+├── core/                    # Base classes and shared utilities
+│   ├── __init__.py
+│   ├── inky_app_base.py     # Legacy base class
+│   ├── elm_inky_app_base.py # ELM base class with lifecycle hooks
+│   ├── elm_events.py        # Event definitions (ButtonEvent, TimerEvent, etc.)
+│   ├── logger.py            # Logging utility
+│   └── inky_helper.py       # Inky Frame helper functions
+├── models/                  # Data models (ELM Models)
+│   ├── __init__.py
+│   └── weather_model.py     # Weather app data model
+├── services/                # API services, data fetching
+│   └── __init__.py          # (reserved for future service modules)
+├── apps/                    # Application implementations
+│   ├── __init__.py
+│   ├── weather/
+│   │   ├── __init__.py
+│   │   ├── weather.py       # Legacy Weather app
+│   │   └── weather_elm.py   # ELM Weather app
+│   ├── launcher/
+│   │   ├── __init__.py
+│   │   └── launcher_app.py  # App launcher
+│   ├── nasa_apod/
+│   │   ├── __init__.py
+│   │   └── nasa_apod.py     # NASA APOD app
+│   ├── xkcd/
+│   │   ├── __init__.py
+│   │   └── daily_xkcd.py    # XKCD comic app
+│   ├── news/
+│   │   ├── __init__.py
+│   │   └── news_headlines.py # News headlines app
+│   ├── word_clock/
+│   │   ├── __init__.py
+│   │   └── word_clock.py    # Word clock app
+│   ├── softer_world/
+│   │   ├── __init__.py
+│   │   └── softer_world.py  # Softer World comic app
+│   └── carbon_intensity/
+│       ├── __init__.py
+│       └── carbon_intensity.py # Carbon intensity app
+├── utils/                   # Shared utilities
+│   ├── __init__.py
+│   ├── Timer.py             # Timer utility
+│   ├── typography.py        # Typography utilities
+│   └── pallet-genorator.py  # Color palette generator
+├── sd/                      # SD card storage
+├── docs/                    # Documentation
+│   └── plan.md              # This file
+├── typings/                 # Type stubs (for development)
+└── .gitignore               # Git ignore rules
+```
+
+### Key Benefits of This Structure
+
+- **Separation of concerns**: Core, models, services, and apps are distinct
+- **Scalability**: Easy to add new apps without cluttering root
+- **ELM alignment**: Models and services are separate from app logic
+- **Import clarity**: `from core.inky_app_base import InkyAppBase`, `from apps.weather.weather_elm import WeatherApp`
+- **Testing**: Easier to test individual components
+
+### Import Strategy
+
+MicroPython supports nested packages with proper `__init__.py` files:
+
+- **Core files** use relative imports within package: `from .logger import Logger`
+- **External imports use full paths**: `from core.inky_app_base import InkyAppBase`
+- **Apps** use full paths: `from apps.weather.weather_elm import WeatherApp`
+- **Models** and **utils** use full paths: `from models.weather_model import WeatherModel`, `from utils.Timer import Timer`
+
+This approach provides clean organization while maintaining MicroPython compatibility.
+
 ## Overview
 
 This document outlines the refactoring of the Inky Frame application architecture to follow the ELM (Model-View-Update) pattern. ELM provides a clear separation of concerns that improves maintainability, testability, and responsiveness—critical for the resource-constrained Raspberry Pi Pico environment.
@@ -264,25 +344,49 @@ def view(self, model: WeatherModel) -> None:
 
 ## Migration Strategy
 
-### Phase 1: Foundation (Week 1-2) ✅ COMPLETED
+### Phase 0: Project Reorganization ⏳ IN PROGRESS
 
-1. **Create new base class** ✅
-   - Implemented `ElmInkyAppBase` with lifecycle hooks
-   - Added abstract methods: `init()`, `update()`, `view()`
-   - Added lifecycle hooks: `on_init()`, `on_exit()`, `on_frame()`, `on_button_press()`, `on_timer()`, `on_network_response()`
-   - File: `elm_inky_app_base.py`
+**Status**: Project structure has been reorganized into packages (core/, apps/, models/, utils/). Phase 1 files need to be recreated in the new structure.
 
-2. **Define event system** ✅
-   - Created `ButtonEvent`, `TimerEvent`, `NetworkEvent`, `HomeEvent` types
-   - Added `RefreshEvent` and `NavigationEvent` for convenience
-   - File: `elm_events.py`
+1. **Create package structure** ✅
+   - Created `core/` directory for base classes and utilities
+   - Created `apps/` directory with subdirectories for each app
+   - Created `models/` directory for data models
+   - Created `utils/` directory for shared utilities
+   - Moved `inky_helper.py` to `core/inky_helper.py`
+   - Updated `main.py` imports to use new package structure
 
-3. **Update main loop** ✅ COMPLETED
-   - Refactored `main.py` to use event-driven architecture
-   - Removed direct button handler calls
-   - Implemented ButtonEvent dispatching for ELM apps
-   - Removed `state.json` dependency, defaults to Weather app on boot
-   - Maintains backward compatibility with legacy apps
+2. **Recreate Phase 1 files in new structure** ⏳ PENDING
+   - Recreate `elm_inky_app_base.py` in `core/` (without abc/typing for MicroPython)
+   - Recreate `elm_events.py` in `core/` (without type hints for MicroPython)
+   - Recreate `weather_model.py` in `models/` (without type hints for MicroPython)
+   - Recreate `weather_elm.py` in `apps/weather/` (using new imports)
+   - Recreate `Timer.py` in `utils/`
+   - Create `__init__.py` files for all packages
+
+3. **Update main.py for new structure** ✅
+   - Updated imports to use `core.inky_helper`, `core.elm_events`, `core.logger`
+   - Updated weather app import to `apps.weather.weather_elm`
+
+### Phase 1: Foundation (Week 1-2) ⏳ AWAITING REORGANIZATION
+
+_Note: Original Phase 1 was completed but files were deleted during reorganization. Need to recreate in new package structure._
+
+1. **Create new base class** ⏳ PENDING
+   - Implement `ElmInkyAppBase` with lifecycle hooks in `core/elm_inky_app_base.py`
+   - Add abstract methods: `init()`, `update()`, `view()` (using NotImplementedError for MicroPython)
+   - Add lifecycle hooks: `on_init()`, `on_exit()`, `on_frame()`, `on_button_press()`, `on_timer()`, `on_network_response()`
+   - Remove abc and typing dependencies for MicroPython compatibility
+
+2. **Define event system** ⏳ PENDING
+   - Create `ButtonEvent`, `TimerEvent`, `NetworkEvent`, `HomeEvent` types in `core/elm_events.py`
+   - Add `RefreshEvent` and `NavigationEvent` for convenience
+   - Remove type hints for MicroPython compatibility
+
+3. **Update main loop** ⏳ PENDING
+   - Ensure `main.py` works with new package structure
+   - Verify ButtonEvent dispatching for ELM apps
+   - Verify Weather app defaults on boot
 
 ### Phase 2: Refactor Existing Apps (Week 3-4)
 
