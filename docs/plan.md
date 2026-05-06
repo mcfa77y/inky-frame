@@ -403,6 +403,7 @@ With 5 buttons, we need a consistent mapping strategy:
 2. **Limited type hints**: Use comments for documentation instead
 3. **Memory constraints**: Keep Models small and avoid deep copying
 4. **No generics**: Use concrete types or duck typing
+5. **No abc module**: Cannot use abstract base classes; use NotImplementedError in method bodies instead
 
 ### Performance Optimizations
 
