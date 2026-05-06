@@ -9,9 +9,6 @@ import gc
 from urllib import urequest
 
 import jpegdec
-import machine
-import sdcard
-import uos
 
 from core.elm_events import ButtonEvent, NavigationEvent
 from core.elm_inky_app_base import ElmInkyAppBase
@@ -28,25 +25,11 @@ class WeatherAppElm(ElmInkyAppBase):
 
     def __init__(self):
         super().__init__()
-        self.sd = None
-        self.sd_spi = None
         self.flask_base_url = FLASK_SERVER_BASE
         self.update_timer = Timer(duration_seconds=self.update_minute_interval * 60)
 
         # Setup SD card
-        self._setup_sd_card()
-
-    def _setup_sd_card(self):
-        """Setup SD card for storing weather images."""
-        self.sd_spi = machine.SPI(0, sck=machine.Pin(18, machine.Pin.OUT),
-                                   mosi=machine.Pin(19, machine.Pin.OUT),
-                                   miso=machine.Pin(16, machine.Pin.OUT))
-        self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
-        try:
-            uos.mount(self.sd, "/sd")
-        except Exception as e:
-            self.logger.error(f"Unable to mount SD card: {e}")
-        gc.collect()
+        self.setup_sd_card()
 
     def init(self) -> WeatherModel:
         """Initialize the initial WeatherModel state."""
@@ -67,8 +50,7 @@ class WeatherAppElm(ElmInkyAppBase):
 
     def on_exit(self, model: WeatherModel) -> None:
         """Cleanup on app exit."""
-        self.sd = None
-        self.sd_spi = None
+        self._cleanup_sd_card()
 
     def _handle_button_event(self, model: WeatherModel, event: ButtonEvent) -> WeatherModel:
         """Handle button press events."""
