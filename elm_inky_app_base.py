@@ -3,11 +3,12 @@ ELM Architecture Base Class for Inky Frame Apps.
 
 Provides a Model-View-Update architecture with lifecycle hooks for
 building predictable, testable Inky Frame applications.
+
+Note: MicroPython doesn't support abc module, so abstract methods are
+documented in docstrings rather than enforced with decorators.
 """
 
-from abc import ABC, abstractmethod
 from typing import Any, Optional
-
 from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY
 from picographics import PicoGraphics
 
@@ -15,7 +16,7 @@ from inky_helper import get_inky_frame_type
 from logger import Logger
 
 
-class ElmInkyAppBase(ABC):
+class ElmInkyAppBase:
     """Base class for ELM-architected Inky Frame apps with lifecycle hooks."""
 
     def __init__(self):
@@ -27,10 +28,12 @@ class ElmInkyAppBase(ABC):
             self.height) if self.height is not None else None
         self.logger = Logger(default_context={"app": self.__class__.__name__})
 
-    @abstractmethod
     def init(self) -> Any:
-        """Initialize the initial Model state."""
-        pass
+        """Initialize the initial Model state.
+        
+        Subclasses must implement this method.
+        """
+        raise NotImplementedError("Subclasses must implement init()")
 
     def update(self, model: Any, event: Any) -> Any:
         """Pure function: return new Model based on current Model and Event.
@@ -49,10 +52,12 @@ class ElmInkyAppBase(ABC):
         # If no specific handler, return model unchanged
         return model
 
-    @abstractmethod
     def view(self, model: Any) -> None:
-        """Pure function: render Model to display (no side effects)."""
-        pass
+        """Pure function: render Model to display (no side effects).
+        
+        Subclasses must implement this method.
+        """
+        raise NotImplementedError("Subclasses must implement view()")
 
     # Lifecycle hooks (optional overrides)
     def on_init(self, model: Any) -> None:
@@ -82,7 +87,7 @@ class ElmInkyAppBase(ABC):
     def show_error(self, message="Unable to display image!"):
         """
         Draw a standard error message box at the center of the screen.
-        Uses self.graphics, self.WIDTH, self.HEIGHT by default.
+        Uses self.graphics, self.width, self.height by default.
         """
         graphics = self.graphics
         width = self.width
