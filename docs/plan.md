@@ -400,7 +400,7 @@ With 5 buttons, we need a consistent mapping strategy:
 ### MicroPython Limitations
 
 1. **No native dataclasses**: Use `@dataclass` from micropython-lib or simple tuples/dicts
-2. **Limited type hints**: Use comments for documentation instead
+2. **No typing module**: Cannot use type hints; remove all type annotations from code
 3. **Memory constraints**: Keep Models small and avoid deep copying
 4. **No generics**: Use concrete types or duck typing
 5. **No abc module**: Cannot use abstract base classes; use NotImplementedError in method bodies instead
