@@ -9,7 +9,6 @@ Note: MicroPython doesn't support abc methods. They are documented in docstrings
 
 
 import gc  # type: ignore
-from typing import Any, Optional
 
 import machine  # type: ignore
 import sdcard  # type: ignore
@@ -59,7 +58,7 @@ class ElmInkyAppBase:
         # If no specific handler, return model unchanged
         return model
 
-    def view(self, model: Any) -> None:
+    def view(self, model) -> None:
         """Pure function: render Model to display (no side effects).
         
         Subclasses must implement this method.
@@ -67,27 +66,27 @@ class ElmInkyAppBase:
         raise NotImplementedError("Subclasses must implement view()")
 
     # Lifecycle hooks (optio)
-    def on_init(self, model: Any) -> None:
+    def on_init(self, model) -> None:
         """Called after model initialization. Override for setup logic (e.g., network requests)."""
         pass
 
-    def on_exit(self, model: Any) -> None:
+    def on_exit(self, model) -> None:
         """Called before app exits. Override for cleanup logic (e.g., unmount SD card)."""
         pass
 
-    def on_frame(self, model: Any) -> Optional[Any]:
+    def on_frame(self, model) :
         """Called every frame before event processing. Return an Event to inject, or None."""
         return None
 
-    def on_button_press(self, button: str, model: Any) -> Optional[Any]:
+    def on_button_press(self, button: str, model) :
         """Called when a button is pressed. Return an Event to process, or None to ignore."""
         return None
 
-    def on_timer(self, model: Any) -> Optional[Any]:
+    def on_timer(self, model) :
         """Called on timer tick. Return an Event to process, or None."""
         return None
 
-    def on_network_response(self, data: dict, model: Any) -> Optional[Any]:
+    def on_network_response(self, data: dict, model) :
         """Called when network data arrives. Return an Event to process, or None."""
         return None
 
