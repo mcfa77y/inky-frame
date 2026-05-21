@@ -9,14 +9,16 @@ import gc
 from urllib import urequest
 
 import jpegdec
+import network
 
 from core.elm_events import ButtonEvent, NavigationEvent
 from core.elm_inky_app_base import ElmInkyAppBase
+from core.inky_helper import network_connect
 from models.weather_model import WeatherModel
 from utils.Timer import Timer
 
 FILENAME = "/sd/weather-daily.jpg"
-FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"
+API_SERVER_BASE_URL = "https://princess-donut.com"
 DEFAULT_ZIPCODE = "94110"  # San Francisco default
 
 
@@ -25,7 +27,7 @@ class WeatherAppElm(ElmInkyAppBase):
 
     def __init__(self):
         super().__init__()
-        self.flask_base_url = FLASK_SERVER_BASE
+        self.flask_base_url = API_SERVER_BASE_URL
         self.update_timer = Timer(duration_seconds=self.update_minute_interval * 60)
 
         # Setup SD card
@@ -39,86 +41,104 @@ class WeatherAppElm(ElmInkyAppBase):
             weather_views=["current", "forecast", "today"],
             image_path=FILENAME,
             last_update_time=0,
-            is_loading=True  # Start by loading initial weather data
+            is_loading=True,  # Start by loading initial weather data
         )
 
     def on_init(self, model: WeatherModel) -> None:
         """Called after model initialization - trigger initial data download."""
         current_view = model.weather_views[model.current_view_index]
-        self._download_weather(model.zipcode, current_view)
+        success = self._download_weather(model.zipcode, current_view)
+        if success:
+            model.is_loading = False
+            model.error_message = ""
+        else:
+            model.is_loading = False
+            model.error_message = "Unable to download weather image!"
         self.update_timer.start()
 
     def on_exit(self, model: WeatherModel) -> None:
         """Cleanup on app exit."""
         self._cleanup_sd_card()
 
-    def _handle_button_event(self, model: WeatherModel, event: ButtonEvent) -> WeatherModel:
+    def _update_weather_and_model(
+        self, model: WeatherModel, zipcode: str, view_type: str
+    ) -> WeatherModel:
+        """Download weather image and return the updated model state."""
+        success = self._download_weather(zipcode, view_type)
+        if success:
+            return model.with_loading(False).with_error("")
+        else:
+            return model.with_error("Unable to download weather image!")
+
+    def _handle_button_event(
+        self, model: WeatherModel, event: ButtonEvent
+    ) -> WeatherModel:
         """Handle button press events."""
-        if event.button == 'a':
+        if event.button == "a":
             # Previous view
             new_index = (model.current_view_index - 1) % len(model.weather_views)
-            new_model = model.with_view_index(new_index).with_loading(True)
+            new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
-            self._download_weather(new_model.zipcode, current_view)
             self._reset_timer()
-            return new_model
-        elif event.button == 'b':
+            return self._update_weather_and_model(
+                new_model, new_model.zipcode, current_view
+            )
+        elif event.button == "b":
             # Next view
             new_index = (model.current_view_index + 1) % len(model.weather_views)
-            new_model = model.with_view_index(new_index).with_loading(True)
+            new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
-            self._download_weather(new_model.zipcode, current_view)
             self._reset_timer()
-            return new_model
-        elif event.button == 'c':
+            return self._update_weather_and_model(
+                new_model, new_model.zipcode, current_view
+            )
+        elif event.button == "c":
             # Refresh current view
-            new_model = model.with_loading(True)
-            current_view = new_model.weather_views[new_model.current_view_index]
-            self._download_weather(new_model.zipcode, current_view)
+            current_view = model.weather_views[model.current_view_index]
             self._reset_timer()
-            return new_model
-        elif event.button == 'e':
+            return self._update_weather_and_model(model, model.zipcode, current_view)
+        elif event.button == "e":
             # Home button - return to launcher (handled by main loop)
             return model
 
         return model
 
-    def _handle_navigation_event(self, model: WeatherModel, event: NavigationEvent) -> WeatherModel:
+    def _handle_navigation_event(
+        self, model: WeatherModel, event: NavigationEvent
+    ) -> WeatherModel:
         """Handle navigation events (next/previous)."""
-        if event.direction == 'next':
+        if event.direction == "next":
             new_index = (model.current_view_index + 1) % len(model.weather_views)
-            new_model = model.with_view_index(new_index).with_loading(True)
+            new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
-            self._download_weather(new_model.zipcode, current_view)
             self._reset_timer()
-            return new_model
-        elif event.direction == 'previous':
+            return self._update_weather_and_model(
+                new_model, new_model.zipcode, current_view
+            )
+        elif event.direction == "previous":
             new_index = (model.current_view_index - 1) % len(model.weather_views)
-            new_model = model.with_view_index(new_index).with_loading(True)
+            new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
-            self._download_weather(new_model.zipcode, current_view)
             self._reset_timer()
-            return new_model
+            return self._update_weather_and_model(
+                new_model, new_model.zipcode, current_view
+            )
 
         return model
 
     def _handle_refresh_event(self, model: WeatherModel) -> WeatherModel:
         """Handle refresh event."""
-        new_model = model.with_loading(True)
-        current_view = new_model.weather_views[new_model.current_view_index]
-        self._download_weather(new_model.zipcode, current_view)
+        current_view = model.weather_views[model.current_view_index]
         self._reset_timer()
-        return new_model
+        return self._update_weather_and_model(model, model.zipcode, current_view)
 
     def _handle_timer_event(self, model: WeatherModel) -> WeatherModel:
         """Handle timer event for periodic updates."""
         if self.update_timer.is_expired():
-            new_model = model.with_loading(True)
-            current_view = new_model.weather_views[new_model.current_view_index]
-            self._download_weather(new_model.zipcode, current_view)
+            current_view = model.weather_views[model.current_view_index]
             self.update_timer.reset()
             self.update_timer.start()
-            return new_model
+            return self._update_weather_and_model(model, model.zipcode, current_view)
         return model
 
     def view(self, model: WeatherModel) -> None:
@@ -153,37 +173,57 @@ class WeatherAppElm(ElmInkyAppBase):
 
     def _download_weather(self, zipcode: str, view_type: str = "current"):
         """Download weather image for specified zipcode and view type."""
-        base_url = f"{self.flask_base_url}/weather/apple/{zipcode}"
+        base_url = f"{self.flask_base_url}/weather/image?zip={zipcode}"
 
         if view_type == "current":
-            endpoint = f"{base_url}/current"
+            endpoint = f"{base_url}&view=current"
         elif view_type == "forecast":
-            endpoint = f"{base_url}/forecast"
+            endpoint = f"{base_url}&view=forecast"
         elif view_type == "today":
-            endpoint = f"{base_url}/today"
+            endpoint = f"{base_url}&view=today"
         else:
             endpoint = base_url
 
         if self.width and self.height:
-            url = f"{endpoint}?width={self.width}&height={self.height}"
+            url = f"{endpoint}&width={self.width}&height={self.height}"
         else:
             url = endpoint
 
         self.logger.info(f"Downloading {view_type} weather for {zipcode} from {url}")
         try:
+            # Ensure network is connected before downloading
+            wlan = network.WLAN(network.STA_IF)
+            if not wlan.isconnected():
+                self.logger.warning("WiFi disconnected. Attempting to reconnect...")
+                if not network_connect():
+                    self.logger.error("WLAN is not connected. Aborting download.")
+                    return False
+
+            self.logger.debug(f"Opening URL: {url}")
             socket = urequest.urlopen(url)
+            self.logger.debug("Socket opened successfully")
             data = bytearray(1024)
+
+            self.logger.debug(f"Opening file for writing: {FILENAME}")
             with open(FILENAME, "wb") as f:
+                chunks = 0
                 while True:
                     if socket.readinto(data) == 0:
                         break
                     f.write(data)
+                    chunks += 1
+                    if chunks % 10 == 0:
+                        self.logger.debug(f"Wrote {chunks} chunks...")
+
+            self.logger.debug(f"Download complete. Total chunks: {chunks}")
             socket.close()
             del data
             gc.collect()
+            self.logger.debug("Cleanup complete")
+            return True
         except Exception as e:
             self.logger.error(f"Error downloading weather image: {e}")
-            self.show_error("Unable to download weather image!")
+            return False
 
     def _reset_timer(self) -> None:
         """Reset the update timer after manual refresh."""

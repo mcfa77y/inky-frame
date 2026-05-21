@@ -219,9 +219,19 @@ def network_connect():
     network_led_pwm.duty_u16(30000)
 
     # Handle connection error. Switches the Warn LED on.
-    if wlan.status() != 3:
+    status = wlan.status()
+    if status != 3:
+        status_reasons = {
+            0: "Link down / idle",
+            1: "Connecting",
+            2: "Connected, no IP",
+            -1: "Generic connection failure",
+            -2: "SSID not found",
+            -3: "Bad authentication (wrong password)"
+        }
+        reason = status_reasons.get(status, "Unknown error")
         inky_helper_logger.debug(
-            f"WiFi connection failed with status {wlan.status()}")
+            f"WiFi connection failed with status {status} ({reason})")
         stop_network_led()
         led_warn.on()
     else:
