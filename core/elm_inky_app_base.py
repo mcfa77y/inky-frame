@@ -48,8 +48,11 @@ class ElmInkyAppBase:
         Override for custom event handling logic.
         """
         # Try to dispatch to handler method based on event type
-        event_type_name = event.__class__.__name__
-        handler_name = f"_handle_{event_type_name.lower()}_event"
+        event_name = event.__class__.__name__
+        if event_name.endswith("Event"):
+            event_name = event_name[:-5]
+        event_type = event_name.lower()
+        handler_name = f"_handle_{event_type}_event"
         
         if hasattr(self, handler_name):
             handler = getattr(self, handler_name)

@@ -11,7 +11,7 @@ from urllib import urequest
 import jpegdec
 import network
 
-from core.elm_events import ButtonEvent, NavigationEvent
+from core.elm_events import ButtonEvent, NavigationEvent, TimerEvent
 from core.elm_inky_app_base import ElmInkyAppBase
 from core.inky_helper import network_connect
 from models.weather_model import WeatherModel
@@ -141,6 +141,12 @@ class WeatherAppElm(ElmInkyAppBase):
             return self._update_weather_and_model(model, model.zipcode, current_view)
         return model
 
+    def on_timer(self, model: WeatherModel):
+        """Called on timer tick. Return a TimerEvent if expired."""
+        if self.update_timer.is_expired():
+            return TimerEvent()
+        return None
+
     def view(self, model: WeatherModel) -> None:
         """Pure function: render Model to display."""
         self.graphics.set_pen(1)
@@ -208,9 +214,10 @@ class WeatherAppElm(ElmInkyAppBase):
             with open(FILENAME, "wb") as f:
                 chunks = 0
                 while True:
-                    if socket.readinto(data) == 0:
+                    n = socket.readinto(data)
+                    if n == 0:
                         break
-                    f.write(data)
+                    f.write(memoryview(data)[:n])
                     chunks += 1
                     if chunks % 10 == 0:
                         self.logger.debug(f"Wrote {chunks} chunks...")

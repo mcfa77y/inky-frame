@@ -78,9 +78,29 @@ class ElmRuntime:
             # Detect button press (transition from False to True)
             if current_state and not last_state:
                 self._handle_button_press(button_name)
+                # Break to process one button press event per frame
+                self.button_states[button_name] = current_state
+                break
             
             # Update button state
             self.button_states[button_name] = current_state
+
+        # Check timers if in ELM mode and not loading
+        if self.is_elm_app and not self.loading_action:
+            try:
+                timer_event = self.app.on_timer(self.current_model)
+                if timer_event:
+                    self.logger.info("Timer event triggered")
+                    self.loading_action = True
+                    start_wave_pattern()
+                    try:
+                        self.current_model = self.app.update(self.current_model, timer_event)
+                        self.app.view(self.current_model)
+                    finally:
+                        stop_wave_pattern()
+                        self.loading_action = False
+            except Exception as e:
+                self.logger.error(f"Error handling timer event: {e}")
 
     def _handle_button_press(self, button_name: str):
         """Handle a single button press event."""
@@ -106,10 +126,7 @@ class ElmRuntime:
         if button_name == 'e' and self.launcher_app:
             # Home button - return to launcher
             self.logger.info("Home button pressed - returning to launcher")
-            self.app = self.launcher_app
-            self.current_model = self.app.init()
-            self.app.on_init(self.current_model)
-            self.app.view(self.current_model)
+            self.switch_app(self.launcher_app)
         else:
             # Create ButtonEvent and dispatch
             event = ButtonEvent(button=button_name)
