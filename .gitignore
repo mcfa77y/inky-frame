@@ -181,3 +181,4 @@ state.json
 # Secrets and configuration
 secrets.py
 config.py
+secrets.py
