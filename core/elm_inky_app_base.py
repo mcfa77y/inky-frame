@@ -16,6 +16,7 @@ import uos  # type: ignore
 from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY  # type: ignore
 from picographics import PicoGraphics  # type: ignore
 
+from .elm_events import ButtonEvent
 from .inky_helper import get_inky_frame_type
 from .logger import Logger
 
@@ -81,7 +82,7 @@ class ElmInkyAppBase:
         """Called every frame before event processing. Return an Event to inject, or None."""
         return None
 
-    def on_button_press(self, button: str, model) :
+    def on_button_press(self, model, event: ButtonEvent):
         """Called when a button is pressed. Return an Event to process, or None to ignore."""
         return None
 
@@ -131,7 +132,3 @@ class ElmInkyAppBase:
         graphics.set_pen(1)
         graphics.text(message, 5, (height // 2) - 15, width, 2)
 
-    @property
-    def update_minute_interval(self) -> int:
-        """Return the update interval in minutes (override in subclass if needed)."""
-        return 10

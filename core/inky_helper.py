@@ -12,7 +12,7 @@ from pimoroni_i2c import PimoroniI2C
 
 from .logger import Logger
 
-inky_helper_logger = Logger(default_context={"app": "inky_helper"})
+inky_helper_logger = Logger(default_context={"app": "inky_helper"}, min_level="INFO")
 
 # Pin setup for VSYS_HOLD needed to sleep and wake.
 HOLD_VSYS_EN_PIN = 2

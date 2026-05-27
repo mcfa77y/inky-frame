@@ -29,6 +29,7 @@ class WeatherAppElm(ElmInkyAppBase):
         super().__init__()
         self.flask_base_url = API_SERVER_BASE_URL
         self.update_timer = Timer(duration_seconds=self.update_minute_interval * 60)
+        self.logger.set_min_level("DEBUG")
 
         # Setup SD card
         self.setup_sd_card()
@@ -132,7 +133,7 @@ class WeatherAppElm(ElmInkyAppBase):
         self._reset_timer()
         return self._update_weather_and_model(model, model.zipcode, current_view)
 
-    def _handle_timer_event(self, model: WeatherModel) -> WeatherModel:
+    def on_timer(self, model: WeatherModel) -> WeatherModel:
         """Handle timer event for periodic updates."""
         if self.update_timer.is_expired():
             current_view = model.weather_views[model.current_view_index]
@@ -179,21 +180,17 @@ class WeatherAppElm(ElmInkyAppBase):
 
     def _download_weather(self, zipcode: str, view_type: str = "current"):
         """Download weather image for specified zipcode and view type."""
-        base_url = f"{self.flask_base_url}/weather/image?zip={zipcode}"
+        params = {"zip": zipcode}
 
-        if view_type == "current":
-            endpoint = f"{base_url}&view=current"
-        elif view_type == "forecast":
-            endpoint = f"{base_url}&view=forecast"
-        elif view_type == "today":
-            endpoint = f"{base_url}&view=today"
-        else:
-            endpoint = base_url
+        if view_type in ["current", "forecast", "today"]:
+            params["view"] = view_type
 
         if self.width and self.height:
-            url = f"{endpoint}&width={self.width}&height={self.height}"
-        else:
-            url = endpoint
+            params["width"] = str(self.width)
+            params["height"] = str(self.height)
+
+        query_string = "&".join(f"{k}={v}" for k, v in params.items())
+        url = f"{self.flask_base_url}/weather/image?{query_string}"
 
         self.logger.info(f"Downloading {view_type} weather for {zipcode} from {url}")
         try:

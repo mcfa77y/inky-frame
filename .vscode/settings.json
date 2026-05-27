@@ -16,7 +16,7 @@
     "${workspaceFolder}",
     "${workspaceFolder}/typings"
   ],
-  "python.languageServer": "None",
+  "python.languageServer": "Pylance",
   "micropico.pyIgnore": ".git,.venv-pimaroni-inky-frame,.vscode,__pycache__,*.pyc,typings",
   "files.exclude": {
       ".venv-*": true,       // Excludes python virtual environments
