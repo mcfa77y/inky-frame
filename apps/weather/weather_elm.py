@@ -18,7 +18,7 @@ from models.weather_model import WeatherModel
 from utils.Timer import Timer
 
 FILENAME = "/sd/weather-daily.jpg"
-API_SERVER_BASE_URL = "https://princess-donut.com"
+API_SERVER_BASE_URL = "https://inky-server.princess-donut.com"
 DEFAULT_ZIPCODE = "94110"  # San Francisco default
 
 
@@ -141,12 +141,6 @@ class WeatherAppElm(ElmInkyAppBase):
             self.update_timer.start()
             return self._update_weather_and_model(model, model.zipcode, current_view)
         return model
-
-    def on_timer(self, model: WeatherModel):
-        """Called on timer tick. Return a TimerEvent if expired."""
-        if self.update_timer.is_expired():
-            return TimerEvent()
-        return None
 
     def view(self, model: WeatherModel) -> None:
         """Pure function: render Model to display."""

@@ -280,10 +280,7 @@ main() {
     # Detect device
     detect_device
     
-    # Stop any running program
-    stop_running_program
-    
-    # Initial upload
+    # Initial upload (don't stop program - device might not be running anything)
     initial_upload
     
     # Run main.py
