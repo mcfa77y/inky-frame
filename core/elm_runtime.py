@@ -92,12 +92,10 @@ class ElmRuntime:
                 if timer_event:
                     self.logger.info("Timer event triggered")
                     self.loading_action = True
-                    start_wave_pattern()
                     try:
                         self.current_model = self.app.update(self.current_model, timer_event)
                         self.app.view(self.current_model)
                     finally:
-                        stop_wave_pattern()
                         self.loading_action = False
             except Exception as e:
                 self.logger.error(f"Error handling timer event: {e}")
