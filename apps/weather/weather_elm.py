@@ -28,7 +28,7 @@ class WeatherAppElm(ElmInkyAppBase):
     def __init__(self):
         super().__init__()
         self.flask_base_url = API_SERVER_BASE_URL
-        self.update_timer = Timer(duration_seconds=self.update_minute_interval * 60)
+        self.update_timer = Timer(duration_seconds=10 * 60)
         self.logger.set_min_level("DEBUG")
 
         # Setup SD card
@@ -71,7 +71,7 @@ class WeatherAppElm(ElmInkyAppBase):
         else:
             return model.with_error("Unable to download weather image!")
 
-    def _handle_button_event(
+    def on_button(
         self, model: WeatherModel, event: ButtonEvent
     ) -> WeatherModel:
         """Handle button press events."""
@@ -104,7 +104,7 @@ class WeatherAppElm(ElmInkyAppBase):
 
         return model
 
-    def _handle_navigation_event(
+    def on_navigation(
         self, model: WeatherModel, event: NavigationEvent
     ) -> WeatherModel:
         """Handle navigation events (next/previous)."""
@@ -127,7 +127,7 @@ class WeatherAppElm(ElmInkyAppBase):
 
         return model
 
-    def _handle_refresh_event(self, model: WeatherModel) -> WeatherModel:
+    def on_refresh(self, model: WeatherModel) -> WeatherModel:
         """Handle refresh event."""
         current_view = model.weather_views[model.current_view_index]
         self._reset_timer()
@@ -228,10 +228,6 @@ class WeatherAppElm(ElmInkyAppBase):
         self.update_timer.reset()
         self.update_timer.start()
 
-    @property
-    def update_minute_interval(self) -> int:
-        """Return the update interval in minutes."""
-        return 30  # Update weather every 30 minutes
 
 
 # Module-level app instance for compatibility

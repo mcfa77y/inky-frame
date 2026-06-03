@@ -48,14 +48,20 @@ class ElmInkyAppBase:
         Default implementation dispatches to specific handler methods based on event type.
         Override for custom event handling logic.
         """
-        # Try to dispatch to handler method based on event type
-        event_name = event.__class__.__name__
-        if event_name.endswith("Event"):
-            event_name = event_name[:-5]
-        event_type = event_name.lower()
-        handler_name = f"_handle_{event_type}_event"
+        # Map event types to handler method names
+        event_handlers = {
+            "ButtonEvent": "on_button",
+            "TimerEvent": "on_timer",
+            "NetworkEvent": "on_network_response",
+            "HomeEvent": "on_home",
+            "RefreshEvent": "on_refresh",
+            "NavigationEvent": "on_navigation",
+        }
         
-        if hasattr(self, handler_name):
+        event_type = event.__class__.__name__
+        handler_name = event_handlers.get(event_type)
+        
+        if handler_name and hasattr(self, handler_name):
             handler = getattr(self, handler_name)
             return handler(model, event)
         

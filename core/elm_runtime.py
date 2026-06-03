@@ -77,7 +77,7 @@ class ElmRuntime:
             
             # Detect button press (transition from False to True)
             if current_state and not last_state:
-                self._handle_button_press(button_name)
+                self.on_button_press(button_name)
                 # Break to process one button press event per frame
                 self.button_states[button_name] = current_state
                 break
@@ -100,7 +100,7 @@ class ElmRuntime:
             except Exception as e:
                 self.logger.error(f"Error handling timer event: {e}")
 
-    def _handle_button_press(self, button_name: str):
+    def on_button_press(self, button_name: str):
         """Handle a single button press event."""
         self.loading_action = True
         self.logger.info(f"Button {button_name.upper()} pressed")
