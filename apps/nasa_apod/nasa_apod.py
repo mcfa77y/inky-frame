@@ -63,7 +63,6 @@ class NasaApodApp(InkyAppBase):
                     self.apod_title = "NASA Astronomy Picture of the Day"
             else:
                 print("Title field not found in response")
-                # print response
                 self.logger.debug(json_str)
                 # Fallback to a default title
                 self.apod_title = "NASA Astronomy Picture of the Day"

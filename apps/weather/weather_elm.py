@@ -11,7 +11,7 @@ from urllib import urequest
 import jpegdec
 import network
 
-from core.elm_events import ButtonEvent, NavigationEvent, TimerEvent
+from core.elm_events import ButtonEvent, NavigationEvent
 from core.elm_inky_app_base import ElmInkyAppBase
 from core.inky_helper import network_connect
 from models.weather_model import WeatherModel
@@ -71,9 +71,7 @@ class WeatherAppElm(ElmInkyAppBase):
         else:
             return model.with_error("Unable to download weather image!")
 
-    def on_button(
-        self, model: WeatherModel, event: ButtonEvent
-    ) -> WeatherModel:
+    def on_button(self, model: WeatherModel, event: ButtonEvent) -> WeatherModel:
         """Handle button press events."""
         if event.button == "a":
             # Previous view
@@ -135,7 +133,9 @@ class WeatherAppElm(ElmInkyAppBase):
 
     def on_timer(self, model: WeatherModel) -> WeatherModel:
         """Handle timer event for periodic updates."""
+        self.logger.debug("on_timer")
         if self.update_timer.is_expired():
+            self.logger.debug("Timer expired")
             current_view = model.weather_views[model.current_view_index]
             self.update_timer.reset()
             self.update_timer.start()
@@ -227,7 +227,6 @@ class WeatherAppElm(ElmInkyAppBase):
         """Reset the update timer after manual refresh."""
         self.update_timer.reset()
         self.update_timer.start()
-
 
 
 # Module-level app instance for compatibility

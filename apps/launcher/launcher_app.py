@@ -91,7 +91,6 @@ class LauncherApp(InkyAppBase):
         self.logger.debug(
             "LauncherApp.draw completed and is_draw_completed set to True")
         inky_utils.led_warn.off()
-        return
 
     @property
     def update_interval(self):

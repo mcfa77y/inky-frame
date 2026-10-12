@@ -10,8 +10,7 @@ import urandom
 from core.inky_app_base import InkyAppBase
 
 FILENAME = "/sd/softer-world-daily.jpg"
-# SERVER_BASE_URL = "https://saved-heron-driving.ngrok-free.app"
-SERVER_BASE_URL = "http://181.41.202.117:33337"
+SERVER_BASE_URL = "https://saved-heron-driving.ngrok-free.app"
 
 
 class DailySofterWorldApp(InkyAppBase):
@@ -31,7 +30,6 @@ class DailySofterWorldApp(InkyAppBase):
             uos.mount(self.sd, "/sd")
         except Exception as e:
             self.logger.error(f"Unable to mount SD card: {e}")
-            pass  # Already mounted or error
         gc.collect()
         # Set base URL for Flask server - we'll add comic number and dimensions in update()
         self.flask_base_url = SERVER_BASE_URL

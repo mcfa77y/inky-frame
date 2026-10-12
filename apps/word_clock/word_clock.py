@@ -104,7 +104,7 @@ class WordClockApp(InkyAppBase):
             for letter in word:
                 text_length = graphics.measure_text(
                     letter, self.scale, self.spacing)
-                if not x + text_length <= self.width:
+                if x + text_length > self.width:
                     y += self.line_space
                     x = self.default_x
                 graphics.text(letter.upper(), x, y, self.width,

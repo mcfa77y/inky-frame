@@ -6,11 +6,6 @@ import sys
 from inky.inky_uc8159 import Inky
 
 
-# parser.add_argument("--type", "-t", choices=["css", "act", "raw", "pal", "gpl"], help="Type of palette to output")
-# parser.add_argument("--saturation", "-s", type=float, default=0.5, help="Colour palette saturation")
-# parser.add_argument("--file", "-f", type=pathlib.Path, help="Output file")
-
-# args = parser.parse_args()
 args = {
     "type": "css",
     "saturation": 0.5,

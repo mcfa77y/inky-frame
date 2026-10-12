@@ -31,6 +31,7 @@ class CarbonIntensityApp(InkyAppBase):
         self.datetime_from = ["", ""]
 
     def teardown(self):
+        # No resources to clean up for this app
         pass
 
     def update(self):

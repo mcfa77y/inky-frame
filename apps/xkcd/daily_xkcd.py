@@ -27,7 +27,6 @@ class DailyXkcdApp(InkyAppBase):
             uos.mount(self.sd, "/sd")
         except Exception as e:
             self.logger.error(f"Unable to mount SD card: {e}")
-            pass  # Already mounted or error
         gc.collect()
         # Set image URL based on display type
         if self.display_type == "5.7":

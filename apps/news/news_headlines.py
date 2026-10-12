@@ -23,65 +23,67 @@ def discard_until(stream, find):
     _ = read_until(stream, find)
 
 
+def _read_cdata(s):
+    s.read(1)  # Discard [
+    discard_until(s, b"[")  # Discard CDATA[
+    text = read_until(s, b"]")
+    discard_until(s, b">")  # Discard ]>
+    gc.collect()
+    return text
+
+
+def _handle_closing_tag(s, tag, text, accept_tags, group_by, current):
+    discard_until(s, b">")
+    if not tag:
+        return False
+    top_tag = tag.pop()
+    if top_tag in accept_tags:
+        current[top_tag.decode("utf-8")] = text.decode("utf-8")
+    gc.collect()
+    return top_tag == group_by
+
+
+def _handle_open_tag(s, next_char, tag):
+    current_tag = read_until(s, b">")
+    if not current_tag.endswith(b"/"):
+        tag.append(next_char + current_tag.split(b" ")[0])
+
+
+def _handle_tag(s, tag, text, accept_tags, group_by, current):
+    next_char = s.read(1)
+    if next_char == b"?":
+        discard_until(s, b">")
+        return text, False
+    if next_char == b"!":
+        return _read_cdata(s), False
+    if next_char == b"/":
+        is_grouped = _handle_closing_tag(s, tag, text, accept_tags, group_by, current)
+        return b"", is_grouped
+    _handle_open_tag(s, next_char, tag)
+    return b"", False
+
+
 def parse_xml_stream(s, accept_tags, group_by, max_items=3):
     tag = []
     text = b""
     count = 0
     current = {}
 
-    while True:
-        char = s.read(1)
-        if len(char) == 0:
-            break
-
+    while len(char := s.read(1)) > 0:
         if char == b"<":
-            next_char = s.read(1)
-
-            # Discard stuff like <?xml vers...
-            if next_char == b"?":
-                discard_until(s, b">")
-                continue
-
-            # Detect <![CDATA
-            elif next_char == b"!":
-                s.read(1)  # Discard [
-                discard_until(s, b"[")  # Discard CDATA[
-                text = read_until(s, b"]")
-                discard_until(s, b">")  # Discard ]>
-                gc.collect()
-
-            elif next_char == b"/":
-                current_tag = read_until(s, b">")
-                top_tag = tag[-1]
-
-                # Populate our result dict
-                if top_tag in accept_tags:
-                    current[top_tag.decode("utf-8")] = text.decode("utf-8")
-
-                # If we've found a group of items, yield the dict
-                elif top_tag == group_by:
-                    yield current
-                    current = {}
-                    count += 1
-                    if count == max_items:
-                        return
-                tag.pop()
-                text = b""
-                gc.collect()
-                continue
-
-            else:
-                current_tag = read_until(s, b">")
-                if not current_tag.endswith(b"/"):
-                    tag += [next_char + current_tag.split(b" ")[0]]
-                    text = b""
-
+            text, item_ready = _handle_tag(s, tag, text, accept_tags, group_by, current)
+            if item_ready:
+                yield current
+                current = {}
+                count += 1
+                if count == max_items:
+                    return
         else:
             text += char
 
 
 def measure_qr_code(size, code):
-    w, h = code.get_size()
+    w, _ = code.get_size()
     module_size = int(size / w)
     return module_size * w, module_size
 
