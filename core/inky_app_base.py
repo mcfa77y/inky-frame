@@ -16,8 +16,7 @@ class InkyAppBase:
         self.graphics = PicoGraphics(DISPLAY)
         self.width, self.height = self.graphics.get_bounds()
         self.graphics.set_font("bitmap8")
-        self.display_type = get_inky_frame_type(
-            self.height) if self.height is not None else None
+        self.display_type = get_inky_frame_type(self.height) if self.height is not None else None
         self.logger = Logger(default_context={"app": self.__class__.__name__})
 
     def show_error(self, message="Unable to display image!"):

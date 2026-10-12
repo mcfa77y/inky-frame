@@ -8,6 +8,7 @@ from core.logger import Logger
 
 main_logger = Logger(default_context={"app": "main"})
 
+
 def main():
     # A short delay to give USB chance to initialise
     time.sleep(0.5)
@@ -18,8 +19,9 @@ def main():
 
     # Default to Weather app on boot (no state.json dependency)
     from apps.weather.weather_elm import app as weatherApp
+
     main_logger.info("Defaulting to Weather app on boot")
-    
+
     inky_utils.network_connect()
 
     # Get some memory back, we really need it!
@@ -34,7 +36,7 @@ def main():
     while True:
         # Handle button navigation through the runtime
         runtime.handle_events()
-        
+
         # Small delay to prevent excessive CPU usage
         time.sleep(0.1)
 

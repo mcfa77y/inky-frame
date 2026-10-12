@@ -29,8 +29,7 @@ class Logger:
         if merged_context:
             context_str = " | " + "\n".join(f"{k}={v}" for k, v in merged_context.items())
         msg = f"[{timestamp}] [{level}]{context_str}: {message}"
-        print(msg, file=sys.stderr if level in (
-            "ERROR", "WARNING") else sys.stdout)
+        print(msg, file=sys.stderr if level in ("ERROR", "WARNING") else sys.stdout)
 
     def debug(self, message, context=None):
         self._log(message, "DEBUG", context)

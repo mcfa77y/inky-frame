@@ -1,4 +1,3 @@
-
 import time
 
 from machine import reset
@@ -21,20 +20,17 @@ class LauncherApp(InkyAppBase):
         self.logger.debug("LauncherApp.__init__ called")
 
         self.menu_items = [
-            (4, "A. NASA Picture of the Day", 340,
-             inky_utils.inky_frame.button_a, "nasa_apod"),
+            (4, "A. NASA Picture of the Day", 340, inky_utils.inky_frame.button_a, "nasa_apod"),
             (6, "B. Word Clock", 280, inky_utils.inky_frame.button_b, "word_clock"),
             (2, "C. Daily XKCD", 220, inky_utils.inky_frame.button_c, "daily_xkcd"),
             (3, "D. Headlines", 160, inky_utils.inky_frame.button_d, "news_headlines"),
-            (0, "E. Carbon Intensity", 100,
-             inky_utils.inky_frame.button_e, "carbon_intensity"),
+            (0, "E. Carbon Intensity", 100, inky_utils.inky_frame.button_e, "carbon_intensity"),
         ]
         self.width_offsets = [100, 150, 200, 250, 300]
         self.y_offset = 0
         self.selected_app = None
         self.is_draw_completed = False
-        self.logger.debug(
-            f"LauncherApp initialized with menu_items: {[item[1] for item in self.menu_items]}")
+        self.logger.debug(f"LauncherApp initialized with menu_items: {[item[1] for item in self.menu_items]}")
 
     def update(self):
         # self.logger.debug("LauncherApp.update called")
@@ -57,8 +53,7 @@ class LauncherApp(InkyAppBase):
         width = self.width
         height = self.height
         y_offset = self.y_offset
-        self.logger.debug(
-            f"Drawing launcher screen: width={width}, height={height}, y_offset={y_offset}")
+        self.logger.debug(f"Drawing launcher screen: width={width}, height={height}, y_offset={y_offset}")
         graphics.set_pen(1)
         graphics.clear()
         graphics.set_font("bitmap8")
@@ -70,17 +65,14 @@ class LauncherApp(InkyAppBase):
         title_len = graphics.measure_text(title, 4) // 2
         graphics.text(title, (width // 2 - title_len), 10, width, 4)
         for idx, (pen, text, y_base, button, app_name) in enumerate(self.menu_items):
-            self.logger.debug(
-                f"Drawing menu item: {text} at y_base={y_base}, pen={pen}")
+            self.logger.debug(f"Drawing menu item: {text} at y_base={y_base}, pen={pen}")
             graphics.set_pen(pen)
-            graphics.rectangle(30, height - (y_base + y_offset),
-                               width - self.width_offsets[idx], 50)
+            graphics.rectangle(30, height - (y_base + y_offset), width - self.width_offsets[idx], 50)
             graphics.set_pen(1)
             graphics.text(text, 35, height - (y_base - 15 + y_offset), 600, 3)
         graphics.set_pen(graphics.create_pen(220, 220, 220))
         for idx, (_, _, y_base, _, _) in enumerate(self.menu_items):
-            graphics.rectangle(
-                width - self.width_offsets[idx], height - (y_base + y_offset), 70 + idx * 50, 50)
+            graphics.rectangle(width - self.width_offsets[idx], height - (y_base + y_offset), 70 + idx * 50, 50)
         graphics.set_pen(0)
         note = "Hold A + E, then press Reset, to return to the Launcher"
         note_len = graphics.measure_text(note, 2) // 2
@@ -88,8 +80,7 @@ class LauncherApp(InkyAppBase):
         graphics.update()
         inky_utils.led_warn.off()
         self.is_draw_completed = True
-        self.logger.debug(
-            "LauncherApp.draw completed and is_draw_completed set to True")
+        self.logger.debug("LauncherApp.draw completed and is_draw_completed set to True")
         inky_utils.led_warn.off()
 
     @property

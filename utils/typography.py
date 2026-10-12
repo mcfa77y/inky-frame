@@ -20,8 +20,12 @@ class TypographyApp(InkyAppBase):
         self.img_url = None
 
         # Setup SD card and determine image URL based on display type
-        self.sd_spi = machine.SPI(0, sck=machine.Pin(18, machine.Pin.OUT), mosi=machine.Pin(
-            19, machine.Pin.OUT), miso=machine.Pin(16, machine.Pin.OUT))
+        self.sd_spi = machine.SPI(
+            0,
+            sck=machine.Pin(18, machine.Pin.OUT),
+            mosi=machine.Pin(19, machine.Pin.OUT),
+            miso=machine.Pin(16, machine.Pin.OUT),
+        )
         self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
         try:
             uos.mount(self.sd, "/sd")
@@ -44,15 +48,14 @@ class TypographyApp(InkyAppBase):
         """Download weather image for specified zipcode and view type"""
         # Generate URL for weather endpoint with display-specific dimensions
         endpoint = f"{self.flask_base_url}/typography/sheet"
-        
-        
+
         # Add width and height query parameters using actual display dimensions
         if self.width and self.height:
             url = f"{endpoint}?width={self.width}&height={self.height}"
         else:
             # Default: use endpoint without custom dimensions
             url = endpoint
-        
+
         try:
             socket = urequest.urlopen(url)
             data = bytearray(1024)

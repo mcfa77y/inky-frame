@@ -9,7 +9,7 @@ import uos
 from core.inky_app_base import InkyAppBase
 
 FILENAME = "/sd/weather-daily.jpg"
-FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"
+FLASK_SERVER_BASE = "https://inky-be.princess-donut.com/"
 DEFAULT_ZIPCODE = "94102"  # San Francisco default
 
 
@@ -24,8 +24,12 @@ class WeatherApp(InkyAppBase):
         self.current_view_index = 0  # Start with current weather
 
         # Setup SD card and determine image URL based on display type
-        self.sd_spi = machine.SPI(0, sck=machine.Pin(18, machine.Pin.OUT), mosi=machine.Pin(
-            19, machine.Pin.OUT), miso=machine.Pin(16, machine.Pin.OUT))
+        self.sd_spi = machine.SPI(
+            0,
+            sck=machine.Pin(18, machine.Pin.OUT),
+            mosi=machine.Pin(19, machine.Pin.OUT),
+            miso=machine.Pin(16, machine.Pin.OUT),
+        )
         self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
         try:
             uos.mount(self.sd, "/sd")
@@ -49,7 +53,7 @@ class WeatherApp(InkyAppBase):
         """Download weather image for specified zipcode and view type"""
         # Generate URL for weather endpoint with display-specific dimensions
         base_url = f"{self.flask_base_url}/weather/apple/{zipcode}"
-        
+
         if view_type == "current":
             endpoint = f"{base_url}/current"
         elif view_type == "forecast":
@@ -59,14 +63,14 @@ class WeatherApp(InkyAppBase):
         else:
             # Default to general weather endpoint
             endpoint = f"{base_url}"
-        
+
         # Add width and height query parameters using actual display dimensions
         if self.width and self.height:
             url = f"{endpoint}?width={self.width}&height={self.height}"
         else:
             # Default: use endpoint without custom dimensions
             url = endpoint
-        
+
         self.logger.info(f"Downloading {view_type} weather for {zipcode} from {url}")
         try:
             socket = urequest.urlopen(url)

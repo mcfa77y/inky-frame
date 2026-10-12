@@ -10,14 +10,7 @@ class WeatherModel:
     """Immutable model representing Weather app state."""
 
     def __init__(
-        self,
-        zipcode,
-        current_view_index,
-        weather_views,
-        image_path,
-        last_update_time,
-        is_loading,
-        error_message=""
+        self, zipcode, current_view_index, weather_views, image_path, last_update_time, is_loading, error_message=""
     ):
         self.zipcode = zipcode
         self.current_view_index = current_view_index
@@ -28,10 +21,12 @@ class WeatherModel:
         self.error_message = error_message
 
     def __repr__(self):
-        return (f"WeatherModel(zipcode='{self.zipcode}', "
-                f"current_view_index={self.current_view_index}, "
-                f"is_loading={self.is_loading}, "
-                f"error_message='{self.error_message}')")
+        return (
+            f"WeatherModel(zipcode='{self.zipcode}', "
+            f"current_view_index={self.current_view_index}, "
+            f"is_loading={self.is_loading}, "
+            f"error_message='{self.error_message}')"
+        )
 
     def with_view_index(self, new_index):
         """Return a new WeatherModel with updated view index."""
@@ -42,7 +37,7 @@ class WeatherModel:
             image_path=self.image_path,
             last_update_time=self.last_update_time,
             is_loading=self.is_loading,
-            error_message=self.error_message
+            error_message=self.error_message,
         )
 
     def with_loading(self, loading):
@@ -54,7 +49,7 @@ class WeatherModel:
             image_path=self.image_path,
             last_update_time=self.last_update_time,
             is_loading=loading,
-            error_message=self.error_message
+            error_message=self.error_message,
         )
 
     def with_error(self, error_message):
@@ -66,7 +61,7 @@ class WeatherModel:
             image_path=self.image_path,
             last_update_time=self.last_update_time,
             is_loading=False,
-            error_message=error_message
+            error_message=error_message,
         )
 
     def with_update_time(self, timestamp):
@@ -78,5 +73,5 @@ class WeatherModel:
             image_path=self.image_path,
             last_update_time=timestamp,
             is_loading=False,
-            error_message=self.error_message
+            error_message=self.error_message,
         )

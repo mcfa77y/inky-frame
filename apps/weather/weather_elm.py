@@ -18,7 +18,7 @@ from models.weather_model import WeatherModel
 from utils.Timer import Timer
 
 FILENAME = "/sd/weather-daily.jpg"
-API_SERVER_BASE_URL = "https://inky-server.princess-donut.com"
+API_SERVER_BASE_URL = "https://inky-be.princess-donut.com/"
 DEFAULT_ZIPCODE = "94110"  # San Francisco default
 
 
@@ -27,7 +27,7 @@ class WeatherAppElm(ElmInkyAppBase):
 
     def __init__(self):
         super().__init__()
-        self.flask_base_url = API_SERVER_BASE_URL
+        self.be_base_url = API_SERVER_BASE_URL
         self.update_timer = Timer(duration_seconds=10 * 60)
         self.logger.set_min_level("DEBUG")
 
@@ -61,9 +61,7 @@ class WeatherAppElm(ElmInkyAppBase):
         """Cleanup on app exit."""
         self._cleanup_sd_card()
 
-    def _update_weather_and_model(
-        self, model: WeatherModel, zipcode: str, view_type: str
-    ) -> WeatherModel:
+    def _update_weather_and_model(self, model: WeatherModel, zipcode: str, view_type: str) -> WeatherModel:
         """Download weather image and return the updated model state."""
         success = self._download_weather(zipcode, view_type)
         if success:
@@ -79,18 +77,14 @@ class WeatherAppElm(ElmInkyAppBase):
             new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
             self._reset_timer()
-            return self._update_weather_and_model(
-                new_model, new_model.zipcode, current_view
-            )
+            return self._update_weather_and_model(new_model, new_model.zipcode, current_view)
         elif event.button == "b":
             # Next view
             new_index = (model.current_view_index + 1) % len(model.weather_views)
             new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
             self._reset_timer()
-            return self._update_weather_and_model(
-                new_model, new_model.zipcode, current_view
-            )
+            return self._update_weather_and_model(new_model, new_model.zipcode, current_view)
         elif event.button == "c":
             # Refresh current view
             current_view = model.weather_views[model.current_view_index]
@@ -102,26 +96,20 @@ class WeatherAppElm(ElmInkyAppBase):
 
         return model
 
-    def on_navigation(
-        self, model: WeatherModel, event: NavigationEvent
-    ) -> WeatherModel:
+    def on_navigation(self, model: WeatherModel, event: NavigationEvent) -> WeatherModel:
         """Handle navigation events (next/previous)."""
         if event.direction == "next":
             new_index = (model.current_view_index + 1) % len(model.weather_views)
             new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
             self._reset_timer()
-            return self._update_weather_and_model(
-                new_model, new_model.zipcode, current_view
-            )
+            return self._update_weather_and_model(new_model, new_model.zipcode, current_view)
         elif event.direction == "previous":
             new_index = (model.current_view_index - 1) % len(model.weather_views)
             new_model = model.with_view_index(new_index)
             current_view = new_model.weather_views[new_model.current_view_index]
             self._reset_timer()
-            return self._update_weather_and_model(
-                new_model, new_model.zipcode, current_view
-            )
+            return self._update_weather_and_model(new_model, new_model.zipcode, current_view)
 
         return model
 
@@ -184,7 +172,7 @@ class WeatherAppElm(ElmInkyAppBase):
             params["height"] = str(self.height)
 
         query_string = "&".join(f"{k}={v}" for k, v in params.items())
-        url = f"{self.flask_base_url}/weather/image?{query_string}"
+        url = f"{self.be_base_url}/weather/image?{query_string}"
 
         self.logger.info(f"Downloading {view_type} weather for {zipcode} from {url}")
         try:

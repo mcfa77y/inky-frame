@@ -20,8 +20,12 @@ class DailyXkcdApp(InkyAppBase):
         self.img_url = None
 
         # Setup SD card and determine image URL based on display type
-        self.sd_spi = machine.SPI(0, sck=machine.Pin(18, machine.Pin.OUT), mosi=machine.Pin(
-            19, machine.Pin.OUT), miso=machine.Pin(16, machine.Pin.OUT))
+        self.sd_spi = machine.SPI(
+            0,
+            sck=machine.Pin(18, machine.Pin.OUT),
+            mosi=machine.Pin(19, machine.Pin.OUT),
+            miso=machine.Pin(16, machine.Pin.OUT),
+        )
         self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
         try:
             uos.mount(self.sd, "/sd")

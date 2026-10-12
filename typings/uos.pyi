@@ -1,2 +1,6 @@
 # This umodule is a MicroPython reference to os
 from os import *
+from typing import Any
+
+def mount(fsobj: Any, mount_point: str, *, readonly: bool = False) -> None: ...
+def umount(mount_point: str) -> None: ...

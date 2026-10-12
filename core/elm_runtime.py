@@ -9,8 +9,8 @@ that bridges hardware events to the app's update/view cycle.
 import inky_frame
 
 from core.elm_events import ButtonEvent
-from core.inky_helper import start_wave_pattern, stop_wave_pattern
 from core.elm_inky_app_base import ElmInkyAppBase
+from core.inky_helper import start_wave_pattern, stop_wave_pattern
 from core.logger import Logger
 
 
@@ -46,9 +46,7 @@ class ElmRuntime:
         self.current_model = None
 
         # Detect if app is ELM-based
-        self.is_elm_app = (
-            hasattr(app, "init") and hasattr(app, "update") and hasattr(app, "view")
-        )
+        self.is_elm_app = hasattr(app, "init") and hasattr(app, "update") and hasattr(app, "view")
 
         self.logger.info(f"Runtime initialized. ELM mode: {self.is_elm_app}")
 
@@ -90,9 +88,7 @@ class ElmRuntime:
                     self.logger.info("Timer event triggered")
                     self.loading_action = True
                     try:
-                        self.current_model = self.app.update(
-                            self.current_model, timer_event
-                        )
+                        self.current_model = self.app.update(self.current_model, timer_event)
                         self.app.view(self.current_model)
                     finally:
                         self.loading_action = False
@@ -135,16 +131,13 @@ class ElmRuntime:
         button_method = f"button_{button_name}_press"
         if hasattr(self.app, button_method):
             getattr(self.app, button_method)()
-            self.app.draw()
+            if hasattr(self.app, "draw"):
+                getattr(self.app, "draw")()
         else:
             self.logger.debug(f"Button {button_name} pressed but no handler found")
 
     def switch_app(self, new_app):
         """Switch to a different app."""
         self.app = new_app
-        self.is_elm_app = (
-            hasattr(new_app, "init")
-            and hasattr(new_app, "update")
-            and hasattr(new_app, "view")
-        )
+        self.is_elm_app = hasattr(new_app, "init") and hasattr(new_app, "update") and hasattr(new_app, "view")
         self.start()

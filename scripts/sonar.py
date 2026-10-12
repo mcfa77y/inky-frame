@@ -78,14 +78,16 @@ def get_docker_containers():
             cid, name, img, status = parts[0], parts[1], parts[2], parts[3]
             if "sonar" in name.lower() or "sonar" in img.lower():
                 is_running = status.lower().startswith("up")
-                containers.append({
-                    "id": cid,
-                    "name": name,
-                    "image": img,
-                    "status": status,
-                    "running": is_running,
-                    "is_app": "sonarqube" in img.lower() or name == "sonarqube",
-                })
+                containers.append(
+                    {
+                        "id": cid,
+                        "name": name,
+                        "image": img,
+                        "status": status,
+                        "running": is_running,
+                        "is_app": "sonarqube" in img.lower() or name == "sonarqube",
+                    }
+                )
     return containers
 
 
@@ -125,9 +127,13 @@ def ensure_project_and_token(host_url, project_key):
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode())
             if data.get("paging", {}).get("total", 0) == 0:
-                print(f"{CLR_CYAN}[INFO]{CLR_RESET} Initializing project '{project_key}' in SonarQube...", file=sys.stderr)
+                print(
+                    f"{CLR_CYAN}[INFO]{CLR_RESET} Initializing project '{project_key}' in SonarQube...", file=sys.stderr
+                )
                 create_data = urllib.parse.urlencode({"project": project_key, "name": project_key}).encode()
-                create_req = urllib.request.Request(f"{host_url}/api/projects/create", data=create_data, headers=headers)
+                create_req = urllib.request.Request(
+                    f"{host_url}/api/projects/create", data=create_data, headers=headers
+                )
                 urllib.request.urlopen(create_req, timeout=5)
     except Exception as e:
         print(f"{CLR_YELLOW}[WARN]{CLR_RESET} Project verification failed: {e}", file=sys.stderr)
@@ -258,10 +264,15 @@ def cmd_scan(args, host_url, project_key, token):
         print(f"{CLR_YELLOW}[WARN]{CLR_RESET} 'sonar-scanner' CLI not found on PATH. Falling back to Docker scanner...")
         docker_host = host_url.replace("localhost", "host.docker.internal").replace("127.0.0.1", "host.docker.internal")
         cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{os.getcwd()}:/usr/src",
-            "-e", f"SONAR_HOST_URL={docker_host}",
-            "-e", f"SONAR_TOKEN={token}",
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{os.getcwd()}:/usr/src",
+            "-e",
+            f"SONAR_HOST_URL={docker_host}",
+            "-e",
+            f"SONAR_TOKEN={token}",
             "sonarsource/sonar-scanner-cli",
             f"-Dsonar.projectKey={project_key}",
         ]
@@ -466,12 +477,7 @@ def cmd_start(host_url):
             print(f"{CLR_GREEN}[OK]{CLR_RESET} SonarQube container '{app['name']}' is already running.")
     else:
         print(f"{CLR_CYAN}[INFO]{CLR_RESET} No existing SonarQube container found. Creating 'sonarqube' container...")
-        cmd = [
-            "docker", "run", "-d",
-            "--name", "sonarqube",
-            "-p", "9000:9000",
-            "sonarqube:community"
-        ]
+        cmd = ["docker", "run", "-d", "--name", "sonarqube", "-p", "9000:9000", "sonarqube:community"]
         subprocess.run(cmd, check=True)
 
     print(f"{CLR_CYAN}[INFO]{CLR_RESET} Waiting for SonarQube API to become ready at {host_url}...")
@@ -538,14 +544,30 @@ def main():
     parser.add_argument("--host", default=None, help=f"SonarQube host URL (default: {DEFAULT_HOST})")
     parser.add_argument("--project", default=None, help=f"Sonar project key (default: {DEFAULT_PROJECT})")
     parser.add_argument("--token", default=None, help="SonarQube token")
-    parser.add_argument("--wait", action="store_true", default=True, help="Wait for compute engine analysis (default: true)")
+    parser.add_argument(
+        "--wait", action="store_true", default=True, help="Wait for compute engine analysis (default: true)"
+    )
     parser.add_argument("--no-wait", dest="wait", action="store_false", help="Do not wait for compute engine analysis")
     parser.add_argument("--strict", action="store_true", help="Exit with code 1 if Quality Gate fails")
     parser.add_argument("--open", action="store_true", help="Automatically open dashboard after scan")
     parser.add_argument("--lines", type=int, default=100, help="Number of log lines to show (for 'logs' command)")
-    parser.add_argument("--resolved", action="store_true", help="List resolved issues instead of open/unresolved issues")
-    parser.add_argument("--type", "-t", default=None, choices=["BUG", "VULNERABILITY", "CODE_SMELL", "SECURITY_HOTSPOT"], help="Filter issues by type")
-    parser.add_argument("--severity", "-s", default=None, choices=["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"], help="Filter issues by severity")
+    parser.add_argument(
+        "--resolved", action="store_true", help="List resolved issues instead of open/unresolved issues"
+    )
+    parser.add_argument(
+        "--type",
+        "-t",
+        default=None,
+        choices=["BUG", "VULNERABILITY", "CODE_SMELL", "SECURITY_HOTSPOT"],
+        help="Filter issues by type",
+    )
+    parser.add_argument(
+        "--severity",
+        "-s",
+        default=None,
+        choices=["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"],
+        help="Filter issues by severity",
+    )
     parser.add_argument("--rule", default=None, help="Filter issues by rule ID (e.g. S1172 or python:S1172)")
     parser.add_argument("--limit", "-n", type=int, default=100, help="Maximum number of issues to fetch (default: 100)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON results")

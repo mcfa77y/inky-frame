@@ -6,12 +6,12 @@ Watches the local directory for changes and uploads modified files to the device
 """
 
 import os
-import sys
-import time
+import re
 import signal
 import subprocess
+import sys
 import threading
-import re
+import time
 
 # Colors for terminal output
 RED = "\033[0;31m"
@@ -37,7 +37,7 @@ EXCLUDE_PATTERNS = [
 DEBOUNCE_DELAY = 0.5  # seconds to wait for changes to settle
 PID_FILE = os.path.join(PROJECT_DIR, ".mpremote.pid")
 
-DEVICE_PORT = None
+DEVICE_PORT: str | None = None
 background_mpremote_proc = None
 changed_files = set()
 timer = None
@@ -69,24 +69,18 @@ def run_device_command(cmd, max_attempts=3, base_delay=1):
     delay = base_delay
     while attempt <= max_attempts:
         try:
-            res = subprocess.run(
-                cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL
-            )
+            res = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
             if res.returncode == 0:
                 return True, res.stdout, res.stderr
 
             err_msg = res.stderr.strip() or res.stdout.strip()
             if attempt < max_attempts:
-                log_warning(
-                    f"Attempt {attempt}/{max_attempts} failed ({err_msg}), retrying in {delay}s..."
-                )
+                log_warning(f"Attempt {attempt}/{max_attempts} failed ({err_msg}), retrying in {delay}s...")
                 time.sleep(delay)
                 delay *= 4
         except Exception as e:
             if attempt < max_attempts:
-                log_warning(
-                    f"Attempt {attempt}/{max_attempts} error ({e}), retrying in {delay}s..."
-                )
+                log_warning(f"Attempt {attempt}/{max_attempts} error ({e}), retrying in {delay}s...")
                 time.sleep(delay)
                 delay *= 4
         attempt += 1
@@ -114,9 +108,7 @@ def detect_device():
     log_info("Detecting Inky Frame device...")
 
     try:
-        res = subprocess.run(
-            ["mpremote", "devs"], capture_output=True, text=True, check=True
-        )
+        res = subprocess.run(["mpremote", "devs"], capture_output=True, text=True, check=True)
         # Find MicroPython Board, exclude Adafruit, and extract device port
         for line in res.stdout.splitlines():
             if "MicroPython Board" in line and "Adafruit" not in line:
@@ -126,9 +118,7 @@ def detect_device():
                     log_success(f"Device found at: {DEVICE_PORT}")
                     return
 
-        log_error(
-            "No MicroPython Board found. Please connect your Inky Frame and ensure it's in USB mode."
-        )
+        log_error("No MicroPython Board found. Please connect your Inky Frame and ensure it's in USB mode.")
         log_error(f"Available devices:\n{res.stdout}")
         sys.exit(1)
     except Exception as e:
@@ -140,9 +130,7 @@ def kill_running_mpremote():
     """Kills any active background mpremote process started by this script."""
     global background_mpremote_proc
     if background_mpremote_proc is not None:
-        log_info(
-            f"Killing active mpremote process (PID: {background_mpremote_proc.pid})..."
-        )
+        log_info(f"Killing active mpremote process (PID: {background_mpremote_proc.pid})...")
         try:
             background_mpremote_proc.terminate()
             # Wait up to 3 seconds for it to exit
@@ -184,9 +172,7 @@ def stop_running_program():
     kill_old_mpremote_pid_file()
 
     log_info("Stopping any running program on device...")
-    success, _, err = run_device_command(
-        ["mpremote", "connect", DEVICE_PORT, "reset"], max_attempts=3, base_delay=1
-    )
+    success, _, err = run_device_command(["mpremote", "connect", DEVICE_PORT, "reset"], max_attempts=3, base_delay=1)
     if success:
         log_success("Program stopped")
     else:
@@ -236,6 +222,9 @@ def run_main():
     time.sleep(1)
 
     try:
+        if not DEVICE_PORT:
+            log_error("DEVICE_PORT is not set")
+            return
         # Run main.py in the background, allowing stdout/stderr to stream to the terminal
         background_mpremote_proc = subprocess.Popen(
             ["mpremote", "connect", DEVICE_PORT, "run", "main.py"],
@@ -357,9 +346,10 @@ def watch_changes():
     ]
 
     try:
-        fswatch_proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
-        )
+        fswatch_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+
+        if fswatch_proc.stdout is None:
+            return
 
         while True:
             line = fswatch_proc.stdout.readline()

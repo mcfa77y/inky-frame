@@ -17,6 +17,7 @@ def read_until(stream, find):
         if c == find:
             return result
         result += c
+    return result
 
 
 def discard_until(stream, find):
@@ -96,16 +97,14 @@ def draw_qr_code(graphics, ox, oy, size, code):
     for x in range(size):
         for y in range(size):
             if code.get_module(x, y):
-                graphics.rectangle(ox + x * module_size, oy +
-                                   y * module_size, module_size, module_size)
+                graphics.rectangle(ox + x * module_size, oy + y * module_size, module_size, module_size)
 
 
 # A function to get the data from an RSS Feed, this in case BBC News.
 def get_rss():
     try:
         stream = urequest.urlopen(URL)
-        output = list(parse_xml_stream(
-            stream, [b"title", b"description", b"guid", b"pubDate"], b"item"))
+        output = list(parse_xml_stream(stream, [b"title", b"description", b"guid", b"pubDate"], b"item"))
         return output
 
     except OSError as e:
@@ -129,8 +128,7 @@ class NewsHeadlinesApp(InkyAppBase):
     def get_rss(self):
         try:
             stream = urequest.urlopen(URL)
-            output = list(parse_xml_stream(
-                stream, [b"title", b"description", b"guid", b"pubDate"], b"item"))
+            output = list(parse_xml_stream(stream, [b"title", b"description", b"guid", b"pubDate"], b"item"))
             return output
         except OSError as e:
             print(e)
@@ -151,20 +149,19 @@ class NewsHeadlinesApp(InkyAppBase):
             g.set_pen(1)
             g.text("Headlines from BBC News:", 10, 10, width - 10, 3)
             g.set_pen(4)
-            g.text(feed[0]["title"], 10, 70, width - 150,
-                   3 if g.measure_text(feed[0]["title"]) < width else 2)
-            g.text(feed[1]["title"], 130, 260, width - 140,
-                   3 if g.measure_text(feed[1]["title"]) < width else 2)
+            g.text(feed[0]["title"], 10, 70, width - 150, 3 if g.measure_text(feed[0]["title"]) < width else 2)
+            g.text(feed[1]["title"], 130, 260, width - 140, 3 if g.measure_text(feed[1]["title"]) < width else 2)
             g.set_pen(3)
-            g.text(feed[0]["description"], 10, 135 if g.measure_text(
-                feed[0]["title"]) < width else 90, width - 150, 2)
-            g.text(feed[1]["description"], 130, 320 if g.measure_text(
-                feed[1]["title"]) < width else 340, width - 145, 2)
+            g.text(feed[0]["description"], 10, 135 if g.measure_text(feed[0]["title"]) < width else 90, width - 150, 2)
+            g.text(
+                feed[1]["description"], 130, 320 if g.measure_text(feed[1]["title"]) < width else 340, width - 145, 2
+            )
             g.line(10, 215, width - 10, 215)
-            self.code.set_text(feed[0]["guid"])
-            draw_qr_code(g, width - 110, 65, 100, self.code)
-            self.code.set_text(feed[1]["guid"])
-            draw_qr_code(g, 10, 265, 100, self.code)
+            if self.code is not None:
+                self.code.set_text(feed[0]["guid"])
+                draw_qr_code(g, width - 110, 65, 100, self.code)
+                self.code.set_text(feed[1]["guid"])
+                draw_qr_code(g, 10, 265, 100, self.code)
             g.set_pen(g.create_pen(200, 0, 0))
             g.rectangle(0, height - 20, width, 20)
         else:

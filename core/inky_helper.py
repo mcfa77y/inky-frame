@@ -2,7 +2,7 @@ import json
 import math
 import os
 import time
-from secrets import WIFI_PASSWORD, WIFI_SSID  # pylint: disable=no-name-in-module
+from secrets import WIFI_PASSWORD, WIFI_SSID  # type: ignore # pylint: disable=no-name-in-module
 
 import inky_frame
 import network
@@ -34,8 +34,7 @@ network_led_pwm.duty_u16(0)
 
 # set the brightness of the network led
 def network_led(brightness):
-    inky_helper_logger.debug(
-        f"network_led called with brightness={brightness}")
+    inky_helper_logger.debug(f"network_led called with brightness={brightness}")
     brightness = max(0, min(100, brightness))  # clamp to range
     # gamma correct the brightness (gamma 2.8)
     value = int(pow(brightness / 100.0, 2.8) * 65535.0 + 0.5)
@@ -50,8 +49,7 @@ network_led_pulse_speed_hz = 1
 def network_led_callback(t):
     inky_helper_logger.debug("network_led_callback triggered")
     # updates the network led brightness based on a sinusoid seeded by the current time
-    brightness = (math.sin(time.ticks_ms() * math.pi * 2 /
-                  (1000 / network_led_pulse_speed_hz)) * 40) + 60
+    brightness = (math.sin(time.ticks_ms() * math.pi * 2 / (1000 / network_led_pulse_speed_hz)) * 40) + 60
     value = int(pow(brightness / 100.0, 2.8) * 65535.0 + 0.5)
     inky_helper_logger.debug(f"network_led_callback sets PWM duty to {value}")
     network_led_pwm.duty_u16(value)
@@ -59,13 +57,11 @@ def network_led_callback(t):
 
 # set the network led into pulsing mode
 def pulse_network_led(speed_hz=1):
-    inky_helper_logger.debug(
-        f"pulse_network_led called with speed_hz={speed_hz}")
+    inky_helper_logger.debug(f"pulse_network_led called with speed_hz={speed_hz}")
     global network_led_pulse_speed_hz
     network_led_pulse_speed_hz = speed_hz
     network_led_timer.deinit()
-    network_led_timer.init(period=50, mode=Timer.PERIODIC,
-                           callback=network_led_callback)
+    network_led_timer.init(period=50, mode=Timer.PERIODIC, callback=network_led_callback)
 
 
 # turn off the network led and disable any pulsing animation that's running
@@ -84,6 +80,7 @@ wave_speed = 0.1
 # PWM objects for button LEDs
 button_pwms = []
 
+
 def init_button_pwms():
     """Initialize PWM for button LEDs"""
     global button_pwms
@@ -101,14 +98,21 @@ def init_button_pwms():
             # Fallback to regular LED control
             button_pwms = []
 
+
 def wave_led_callback(t):
     """Creates a smooth PWM wave pattern across buttons A through E"""
     global wave_position, wave_direction
-    
+
     if not button_pwms:
         # Fallback to simple on/off pattern if PWM failed
         clear_button_leds()
-        buttons = [inky_frame.button_a, inky_frame.button_b, inky_frame.button_c, inky_frame.button_d, inky_frame.button_e]
+        buttons = [
+            inky_frame.button_a,
+            inky_frame.button_b,
+            inky_frame.button_c,
+            inky_frame.button_d,
+            inky_frame.button_e,
+        ]
         step = int(wave_position)
         for i in range(len(buttons)):
             distance = abs(i - step)
@@ -117,10 +121,11 @@ def wave_led_callback(t):
     else:
         # PWM wave pattern
         import math
+
         for i, pwm in enumerate(button_pwms):
             # Calculate distance from wave center
             distance = abs(i - wave_position)
-            
+
             # Create a smooth wave with gaussian-like falloff
             if distance <= 2.0:  # Wave width of 4 LEDs
                 # Use cosine for smooth wave shape
@@ -130,7 +135,7 @@ def wave_led_callback(t):
                 pwm.duty_u16(duty)
             else:
                 pwm.duty_u16(0)  # Turn off distant LEDs
-    
+
     # Move wave position
     wave_position += wave_direction * wave_speed
     if wave_position >= 4.0:  # 5 buttons (0-4)
@@ -138,29 +143,31 @@ def wave_led_callback(t):
     elif wave_position <= 0.0:
         wave_direction = 1
 
+
 def start_wave_pattern():
     """Start the PWM wave LED pattern"""
     inky_helper_logger.debug("start_wave_pattern called")
     global wave_position, wave_direction
     wave_position = 0.0
     wave_direction = 1
-    
+
     # Initialize PWM if not already done
     init_button_pwms()
-    
+
     wave_timer.deinit()
     wave_timer.init(period=50, mode=Timer.PERIODIC, callback=wave_led_callback)
+
 
 def stop_wave_pattern():
     """Stop the wave LED pattern and clear all LEDs"""
     inky_helper_logger.debug("stop_wave_pattern called")
     wave_timer.deinit()
-    
+
     # Turn off PWM LEDs
     if button_pwms:
         for pwm in button_pwms:
             pwm.duty_u16(0)
-    
+
     # Also clear regular LEDs as fallback
     clear_button_leds()
 
@@ -203,7 +210,7 @@ def network_connect():
 
     # Sets the Wireless LED pulsing and attempts to connect to your local network.
     pulse_network_led()
-    wlan.config(pm=0xa11140)  # Turn WiFi power saving off for some slow APs
+    wlan.config(pm=0xA11140)  # Turn WiFi power saving off for some slow APs
     wlan.connect(ssid, password)
     inky_helper_logger.debug("Attempting WiFi connection")
 
@@ -211,8 +218,7 @@ def network_connect():
         if wlan.status() < 0 or wlan.status() >= 3:
             break
         max_wait -= 1
-        inky_helper_logger.debug(
-            f"Waiting for connection... attempts left: {max_wait}")
+        inky_helper_logger.debug(f"Waiting for connection... attempts left: {max_wait}")
         time.sleep(1)
 
     stop_network_led()
@@ -227,11 +233,10 @@ def network_connect():
             2: "Connected, no IP",
             -1: "Generic connection failure",
             -2: "SSID not found",
-            -3: "Bad authentication (wrong password)"
+            -3: "Bad authentication (wrong password)",
         }
         reason = status_reasons.get(status, "Unknown error")
-        inky_helper_logger.debug(
-            f"WiFi connection failed with status {status} ({reason})")
+        inky_helper_logger.debug(f"WiFi connection failed with status {status} ({reason})")
         stop_network_led()
         led_warn.on()
     else:
@@ -249,8 +254,7 @@ def file_exists(filename):
         inky_helper_logger.debug(f"file_exists: {filename} exists: {exists}")
         return exists
     except OSError as e:
-        inky_helper_logger.debug(
-            f"file_exists: {filename} not found, OSError: {e}")
+        inky_helper_logger.debug(f"file_exists: {filename} not found, OSError: {e}")
         return False
 
 
@@ -285,7 +289,7 @@ def load_state():
 def update_state(running):
     inky_helper_logger.debug(f"update_state called with running={running}")
     global state
-    state['run'] = running
+    state["run"] = running
     save_state(state)
 
 
@@ -300,8 +304,7 @@ def launch_app(app_name):
 
 
 def get_inky_frame_type(height):
-    inky_helper_logger.debug(
-        f"get_inky_frame_type called with height={height}")
+    inky_helper_logger.debug(f"get_inky_frame_type called with height={height}")
     """Return the Inky Frame type as a string based on the display height."""
     if height == 448:
         inky_helper_logger.debug("Frame type is 5.7")

@@ -40,12 +40,12 @@ class NasaApodApp(InkyAppBase):
             # Use a similar approach to news_headlines.py
             response = urequest.urlopen(API_URL)
             # Read a reasonable chunk of data
-            json_data = response.read(1024*4)
+            json_data = response.read(1024 * 4)
             self.logger.debug(json_data)
             response.close()
 
             # Parse the JSON to extract the title
-            json_str = json_data.decode('utf-8')
+            json_str = json_data.decode("utf-8")
 
             # Simple string parsing to extract title
             title_start = json_str.find('"title":')
@@ -73,6 +73,10 @@ class NasaApodApp(InkyAppBase):
             # Keep the existing title if there's an error
 
         try:
+            if not self.img_url:
+                self.show_error("No image URL configured for display")
+                return
+
             # Grab the image
             socket = urequest.urlopen(self.img_url)
 
@@ -109,7 +113,7 @@ class NasaApodApp(InkyAppBase):
         graphics.set_pen(0)
         graphics.rectangle(0, self.height - 25, self.width, 25)
         graphics.set_pen(1)
-        graphics.text(self.apod_title, 5, self.height - 20, self.width, 2)
+        graphics.text(self.apod_title or "", 5, self.height - 20, self.width, 2)
 
         gc.collect()
 

@@ -23,8 +23,12 @@ class DailySofterWorldApp(InkyAppBase):
         self.max_comic = 1248  # Softer World had comics 1-1248
 
         # Setup SD card and determine image URL based on display type
-        self.sd_spi = machine.SPI(0, sck=machine.Pin(18, machine.Pin.OUT), mosi=machine.Pin(
-            19, machine.Pin.OUT), miso=machine.Pin(16, machine.Pin.OUT))
+        self.sd_spi = machine.SPI(
+            0,
+            sck=machine.Pin(18, machine.Pin.OUT),
+            mosi=machine.Pin(19, machine.Pin.OUT),
+            miso=machine.Pin(16, machine.Pin.OUT),
+        )
         self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
         try:
             uos.mount(self.sd, "/sd")
@@ -47,14 +51,14 @@ class DailySofterWorldApp(InkyAppBase):
         """Download a specific comic by number"""
         # Generate URL with query parameters for dimensions
         base_url = f"{self.flask_base_url}/comic/{comic_num}"
-        
+
         # Add width and height query parameters using actual display dimensions
         if self.width and self.height:
             url = f"{base_url}?width={self.width}&height={self.height}"
         else:
             # Default: use endpoint without custom dimensions
             url = base_url
-        
+
         self.logger.info(f"Downloading comic {comic_num} from {url}")
         try:
             socket = urequest.urlopen(url)

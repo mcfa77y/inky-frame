@@ -17,8 +17,7 @@ def set_time_with_retries(rtc, retries=3):
             print(f"Time set from NTP: {rtc.datetime()}")
             return
         except OSError:
-            print(
-                f"Unable to contact NTP server (attempt {attempt+1}/{retries})")
+            print(f"Unable to contact NTP server (attempt {attempt + 1}/{retries})")
             time.sleep(1)
     # All attempts failed, set default time to 12:00:00
     print("Setting default time to 12:00:00")
@@ -29,10 +28,21 @@ def set_time_with_retries(rtc, retries=3):
 
 
 def approx_time(hours, minutes):
-    nums = {0: "twelve", 1: "one", 2: "two",
-            3: "three", 4: "four", 5: "five", 6: "six",
-            7: "seven", 8: "eight", 9: "nine", 10: "ten",
-            11: "eleven", 12: "twelve"}
+    nums = {
+        0: "twelve",
+        1: "one",
+        2: "two",
+        3: "three",
+        4: "four",
+        5: "five",
+        6: "six",
+        7: "seven",
+        8: "eight",
+        9: "nine",
+        10: "ten",
+        11: "eleven",
+        12: "twelve",
+    }
     if hours == 12:
         hours = 0
     if minutes > 0 and minutes < 8:
@@ -52,8 +62,38 @@ class WordClockApp(InkyAppBase):
         super().__init__()
         self.rtc = machine.RTC()
         self.time_string = None
-        self.words = ["it", "d", "is", "m", "about", "l", "half", "c", "quarter", "b", "to", "u", "past", "n", "one",
-                      "two", "three", "four", "five", "six", "eleven", "ten", "nine", "eight", "seven", "rm", "twelve", "rt", "O'Clock", "q"]
+        self.words = [
+            "it",
+            "d",
+            "is",
+            "m",
+            "about",
+            "l",
+            "half",
+            "c",
+            "quarter",
+            "b",
+            "to",
+            "u",
+            "past",
+            "n",
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "eleven",
+            "ten",
+            "nine",
+            "eight",
+            "seven",
+            "rm",
+            "twelve",
+            "rt",
+            "O'Clock",
+            "q",
+        ]
         # Set display variables based on display type
         if self.display_type == "4.0":
             self.default_x = 5
@@ -102,13 +142,11 @@ class WordClockApp(InkyAppBase):
             else:
                 graphics.set_pen(graphics.create_pen(220, 220, 220))
             for letter in word:
-                text_length = graphics.measure_text(
-                    letter, self.scale, self.spacing)
+                text_length = graphics.measure_text(letter, self.scale, self.spacing)
                 if x + text_length > self.width:
                     y += self.line_space
                     x = self.default_x
-                graphics.text(letter.upper(), x, y, self.width,
-                              scale=self.scale, spacing=self.spacing)
+                graphics.text(letter.upper(), x, y, self.width, scale=self.scale, spacing=self.spacing)
                 x += self.letter_space
         graphics.update()
 
