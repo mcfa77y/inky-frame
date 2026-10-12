@@ -9,6 +9,7 @@
     "stubPath": "./typings",
     "typeCheckingMode": "basic",
     "reportMissingImports": "none",
+    "reportMissingModuleSource": "none",
     "reportMissingTypeStubs": "none",
     "reportUnknownMemberType": "none",
     "reportUnknownArgumentType": "none",
