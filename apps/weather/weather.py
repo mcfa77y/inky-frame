@@ -2,9 +2,6 @@ import gc
 from urllib import urequest
 
 import jpegdec
-import machine
-import sdcard
-import uos
 
 from core.inky_app_base import InkyAppBase
 
@@ -16,33 +13,17 @@ DEFAULT_ZIPCODE = "94102"  # San Francisco default
 class WeatherApp(InkyAppBase):
     def __init__(self):
         super().__init__()
-        self.sd = None
-        self.sd_spi = None
         self.img_url = None
         self.zipcode = DEFAULT_ZIPCODE
         self.weather_views = ["current", "forecast", "today"]
         self.current_view_index = 0  # Start with current weather
-
-        # Setup SD card and determine image URL based on display type
-        self.sd_spi = machine.SPI(
-            0,
-            sck=machine.Pin(18, machine.Pin.OUT),
-            mosi=machine.Pin(19, machine.Pin.OUT),
-            miso=machine.Pin(16, machine.Pin.OUT),
-        )
-        self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
-        try:
-            uos.mount(self.sd, "/sd")
-        except Exception as e:
-            self.logger.error(f"Unable to mount SD card: {e}")
-        gc.collect()
+        self.setup_sd_card()
         # Set base URL for Flask server - we'll add weather endpoints in update()
         self.flask_base_url = FLASK_SERVER_BASE
 
     def teardown(self):
         # Optionally unmount SD or cleanup
-        self.sd = None
-        self.sd_spi = None
+        self.cleanup_sd_card()
         self.img_url = None
 
     def update(self):

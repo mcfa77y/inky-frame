@@ -1,3 +1,8 @@
+import gc  # type: ignore
+
+import machine  # type: ignore
+import sdcard  # type: ignore
+import uos  # type: ignore
 from picographics import DISPLAY_INKY_FRAME_7 as DISPLAY  # 7.3"
 from picographics import PicoGraphics
 
@@ -18,6 +23,36 @@ class InkyAppBase:
         self.graphics.set_font("bitmap8")
         self.display_type = get_inky_frame_type(self.height) if self.height is not None else None
         self.logger = Logger(default_context={"app": self.__class__.__name__})
+        self.sd = None
+        self.sd_spi = None
+
+    def setup_sd_card(self):
+        """Setup SD card for storing images.
+
+        Initializes SPI and mounts the SD card to /sd.
+        Apps that need SD card storage should call this in their __init__.
+        """
+        self.sd_spi = machine.SPI(
+            0,
+            sck=machine.Pin(18, machine.Pin.OUT),
+            mosi=machine.Pin(19, machine.Pin.OUT),
+            miso=machine.Pin(16, machine.Pin.OUT),
+        )
+        self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
+        try:
+            uos.mount(self.sd, "/sd")
+        except Exception as e:
+            self.logger.error(f"Unable to mount SD card: {e}")
+        gc.collect()
+
+    def cleanup_sd_card(self):
+        """Cleanup SD card resources."""
+        self.sd = None
+        self.sd_spi = None
+
+    def _cleanup_sd_card(self):
+        """Alias for cleanup_sd_card for backwards compatibility."""
+        self.cleanup_sd_card()
 
     def show_error(self, message="Unable to display image!"):
         """

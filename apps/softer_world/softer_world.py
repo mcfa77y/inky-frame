@@ -2,9 +2,6 @@ import gc
 from urllib import urequest
 
 import jpegdec
-import machine
-import sdcard
-import uos
 import urandom
 
 from core.inky_app_base import InkyAppBase
@@ -16,32 +13,16 @@ SERVER_BASE_URL = "https://saved-heron-driving.ngrok-free.app"
 class DailySofterWorldApp(InkyAppBase):
     def __init__(self):
         super().__init__()
-        self.sd = None
-        self.sd_spi = None
         self.img_url = None
         self.current_comic = urandom.randint(1, 1248)  # Start with random comic
         self.max_comic = 1248  # Softer World had comics 1-1248
-
-        # Setup SD card and determine image URL based on display type
-        self.sd_spi = machine.SPI(
-            0,
-            sck=machine.Pin(18, machine.Pin.OUT),
-            mosi=machine.Pin(19, machine.Pin.OUT),
-            miso=machine.Pin(16, machine.Pin.OUT),
-        )
-        self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
-        try:
-            uos.mount(self.sd, "/sd")
-        except Exception as e:
-            self.logger.error(f"Unable to mount SD card: {e}")
-        gc.collect()
+        self.setup_sd_card()
         # Set base URL for Flask server - we'll add comic number and dimensions in update()
         self.flask_base_url = SERVER_BASE_URL
 
     def teardown(self):
         # Optionally unmount SD or cleanup
-        self.sd = None
-        self.sd_spi = None
+        self.cleanup_sd_card()
         self.img_url = None
 
     def update(self):

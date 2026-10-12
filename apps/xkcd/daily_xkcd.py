@@ -2,9 +2,6 @@ import gc
 from urllib import urequest
 
 import jpegdec
-import machine
-import sdcard
-import uos
 
 from core.inky_app_base import InkyAppBase
 
@@ -15,23 +12,9 @@ IMAGE_URL = "https://pimoroni.github.io/feed2image/xkcd-daily.jpg"
 class DailyXkcdApp(InkyAppBase):
     def __init__(self):
         super().__init__()
-        self.sd = None
-        self.sd_spi = None
         self.img_url = None
+        self.setup_sd_card()
 
-        # Setup SD card and determine image URL based on display type
-        self.sd_spi = machine.SPI(
-            0,
-            sck=machine.Pin(18, machine.Pin.OUT),
-            mosi=machine.Pin(19, machine.Pin.OUT),
-            miso=machine.Pin(16, machine.Pin.OUT),
-        )
-        self.sd = sdcard.SDCard(self.sd_spi, machine.Pin(22))
-        try:
-            uos.mount(self.sd, "/sd")
-        except Exception as e:
-            self.logger.error(f"Unable to mount SD card: {e}")
-        gc.collect()
         # Set image URL based on display type
         if self.display_type == "5.7":
             self.img_url = "https://pimoroni.github.io/feed2image/xkcd-daily.jpg"
@@ -44,8 +27,7 @@ class DailyXkcdApp(InkyAppBase):
 
     def teardown(self):
         # Optionally unmount SD or cleanup
-        self.sd = None
-        self.sd_spi = None
+        self.cleanup_sd_card()
         self.img_url = None
 
     def update(self):
