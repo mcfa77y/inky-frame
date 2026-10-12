@@ -15,7 +15,7 @@ from core.elm_events import ButtonEvent, NavigationEvent
 from core.elm_inky_app_base import ElmInkyAppBase
 from core.inky_helper import network_connect
 from models.weather_model import WeatherModel
-from utils.constants import API_SERVER_BASE_URL
+from utils.constants import API_SERVER_BASE_URL, JPEG_MAGIC_BYTES
 from utils.Timer import Timer
 
 FILENAME = "/sd/weather-daily.jpg"
@@ -209,8 +209,8 @@ class WeatherAppElm(ElmInkyAppBase):
 
             # Validate that the downloaded file is a valid JPEG
             with open(FILENAME, "rb") as f:
-                header = f.read(2)
-                if header != b"\xff\xd8":
+                header = f.read(len(JPEG_MAGIC_BYTES))
+                if header != JPEG_MAGIC_BYTES:
                     f.seek(0)
                     error_preview = f.read(256).decode("utf-8", "ignore")
                     self.logger.error(f"Downloaded file is not a valid JPEG: {error_preview}")
