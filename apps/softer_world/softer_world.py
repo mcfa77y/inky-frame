@@ -5,9 +5,10 @@ import jpegdec
 import urandom
 
 from core.inky_app_base import InkyAppBase
+from utils.constants import API_SERVER_BASE_URL
 
 FILENAME = "/sd/softer-world-daily.jpg"
-SERVER_BASE_URL = "https://saved-heron-driving.ngrok-free.app"
+SERVER_BASE_URL = API_SERVER_BASE_URL
 
 
 class DailySofterWorldApp(InkyAppBase):
@@ -31,7 +32,7 @@ class DailySofterWorldApp(InkyAppBase):
     def download_comic(self, comic_num):
         """Download a specific comic by number"""
         # Generate URL with query parameters for dimensions
-        base_url = f"{self.flask_base_url}/comic/{comic_num}"
+        base_url = f"{self.flask_base_url.rstrip('/')}/comic/{comic_num}"
 
         # Add width and height query parameters using actual display dimensions
         if self.width and self.height:

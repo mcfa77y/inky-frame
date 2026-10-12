@@ -4,9 +4,9 @@ from urllib import urequest
 import jpegdec
 
 from core.inky_app_base import InkyAppBase
+from utils.constants import API_SERVER_BASE_URL
 
 FILENAME = "/sd/weather-daily.jpg"
-FLASK_SERVER_BASE = "https://inky-be.princess-donut.com/"
 DEFAULT_ZIPCODE = "94102"  # San Francisco default
 
 
@@ -19,7 +19,7 @@ class WeatherApp(InkyAppBase):
         self.current_view_index = 0  # Start with current weather
         self.setup_sd_card()
         # Set base URL for Flask server - we'll add weather endpoints in update()
-        self.flask_base_url = FLASK_SERVER_BASE
+        self.flask_base_url = API_SERVER_BASE_URL
 
     def teardown(self):
         # Optionally unmount SD or cleanup
@@ -33,7 +33,7 @@ class WeatherApp(InkyAppBase):
     def download_weather(self, zipcode, view_type="current"):
         """Download weather image for specified zipcode and view type"""
         # Generate URL for weather endpoint with display-specific dimensions
-        base_url = f"{self.flask_base_url}/weather/apple/{zipcode}"
+        base_url = f"{self.flask_base_url.rstrip('/')}/weather/apple/{zipcode}"
 
         if view_type == "current":
             endpoint = f"{base_url}/current"

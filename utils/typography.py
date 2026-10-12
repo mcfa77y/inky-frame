@@ -5,8 +5,10 @@ import jpegdec
 
 from core.inky_app_base import InkyAppBase
 
+from .constants import API_SERVER_BASE_URL
+
 FILENAME = "/sd/typography-sheet.jpg"
-FLASK_SERVER_BASE = "https://saved-heron-driving.ngrok-free.app"
+FLASK_SERVER_BASE = API_SERVER_BASE_URL
 
 
 class TypographyApp(InkyAppBase):
@@ -28,7 +30,7 @@ class TypographyApp(InkyAppBase):
     def download_image(self):
         """Download weather image for specified zipcode and view type"""
         # Generate URL for weather endpoint with display-specific dimensions
-        endpoint = f"{self.flask_base_url}/typography/sheet"
+        endpoint = f"{self.flask_base_url.rstrip('/')}/typography/sheet"
 
         # Add width and height query parameters using actual display dimensions
         if self.width and self.height:
