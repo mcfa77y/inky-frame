@@ -12,6 +12,7 @@ Usage:
 Commands:
     scan      Run SonarScanner on project sources (default)
     status    Show SonarQube container health, API status, and latest project metrics
+    issues    List issues (unresolved or resolved) with severity, rule, and file location
     start     Start or launch the local SonarQube Docker container
     stop      Stop the SonarQube Docker container
     logs      Show recent logs from the SonarQube container
@@ -124,12 +125,12 @@ def ensure_project_and_token(host_url, project_key):
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode())
             if data.get("paging", {}).get("total", 0) == 0:
-                print(f"{CLR_CYAN}[INFO]{CLR_RESET} Initializing project '{project_key}' in SonarQube...")
+                print(f"{CLR_CYAN}[INFO]{CLR_RESET} Initializing project '{project_key}' in SonarQube...", file=sys.stderr)
                 create_data = urllib.parse.urlencode({"project": project_key, "name": project_key}).encode()
                 create_req = urllib.request.Request(f"{host_url}/api/projects/create", data=create_data, headers=headers)
                 urllib.request.urlopen(create_req, timeout=5)
     except Exception as e:
-        print(f"{CLR_YELLOW}[WARN]{CLR_RESET} Project verification failed: {e}")
+        print(f"{CLR_YELLOW}[WARN]{CLR_RESET} Project verification failed: {e}", file=sys.stderr)
 
     # Generate user token
     token_name = f"auto-token-{int(time.time())}"
@@ -139,10 +140,10 @@ def ensure_project_and_token(host_url, project_key):
         with urllib.request.urlopen(token_req, timeout=5) as resp:
             token_resp = json.loads(resp.read().decode())
             new_token = token_resp.get("token")
-            print(f"{CLR_GREEN}[OK]{CLR_RESET} Generated analysis token: {token_name}")
+            print(f"{CLR_GREEN}[OK]{CLR_RESET} Generated analysis token: {token_name}", file=sys.stderr)
             return new_token
     except Exception as e:
-        print(f"{CLR_YELLOW}[WARN]{CLR_RESET} Could not generate token via admin credentials: {e}")
+        print(f"{CLR_YELLOW}[WARN]{CLR_RESET} Could not generate token via admin credentials: {e}", file=sys.stderr)
         return None
 
 
@@ -160,6 +161,43 @@ def fetch_metrics(host_url, project_key, token=None):
             return {m["metric"]: m.get("value", "N/A") for m in measures}
     except Exception:
         return {}
+
+
+def fetch_issues(
+    host_url,
+    project_key,
+    token=None,
+    resolved=False,
+    issue_types=None,
+    severities=None,
+    rule=None,
+    page_size=100,
+):
+    params = {
+        "componentKeys": project_key,
+        "resolved": "true" if resolved else "false",
+        "ps": str(page_size),
+    }
+    if issue_types:
+        params["types"] = issue_types.upper()
+    if severities:
+        params["severities"] = severities.upper()
+    if rule:
+        rule_key = rule if ":" in rule else f"python:{rule}"
+        params["rules"] = rule_key
+
+    query_str = urllib.parse.urlencode(params)
+    url = f"{host_url}/api/issues/search?{query_str}"
+    req = urllib.request.Request(url)
+    if token:
+        creds = base64.b64encode(f"{token}:".encode()).decode()
+        req.add_header("Authorization", f"Basic {creds}")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode())
+    except Exception as e:
+        print(f"{CLR_RED}[ERROR]{CLR_RESET} Failed to fetch issues: {e}")
+        return None
 
 
 def wait_for_analysis_report(host_url, project_key, token=None, timeout_seconds=30):
@@ -317,6 +355,97 @@ def cmd_status(host_url, project_key, token):
     return 0
 
 
+def cmd_issues(args, host_url, project_key, token):
+    is_up, status_str, _ = check_api_health(host_url)
+    if not is_up:
+        print(f"{CLR_RED}[ERROR]{CLR_RESET} SonarQube server is not accessible at {host_url} (status: {status_str}).")
+        return 1
+
+    if not token or not validate_token(host_url, token):
+        token = ensure_project_and_token(host_url, project_key)
+
+    data = fetch_issues(
+        host_url,
+        project_key,
+        token=token,
+        resolved=args.resolved,
+        issue_types=args.type,
+        severities=args.severity,
+        rule=args.rule,
+        page_size=args.limit,
+    )
+    if data is None:
+        return 1
+
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return 0
+
+    status_label = "Resolved" if args.resolved else "Unresolved"
+    issues = data.get("issues", [])
+    total = data.get("total", len(issues))
+
+    print(f"\n{CLR_BOLD}=== SonarQube {status_label} Issues for '{project_key}' ==={CLR_RESET}\n")
+
+    if not issues:
+        print(f"{CLR_GREEN}[OK]{CLR_RESET} No {status_label.lower()} issues found. Clean analysis!\n")
+        return 0
+
+    sev_colors = {
+        "BLOCKER": f"{CLR_RED}{CLR_BOLD}",
+        "CRITICAL": CLR_RED,
+        "MAJOR": CLR_YELLOW,
+        "MINOR": CLR_CYAN,
+        "INFO": CLR_BLUE,
+    }
+    type_badges = {
+        "BUG": f"{CLR_RED}[BUG]{CLR_RESET}",
+        "VULNERABILITY": f"{CLR_RED}[VULN]{CLR_RESET}",
+        "CODE_SMELL": f"{CLR_YELLOW}[SMELL]{CLR_RESET}",
+        "SECURITY_HOTSPOT": f"{CLR_YELLOW}[HOTSPOT]{CLR_RESET}",
+    }
+
+    counts = {}
+    for issue in issues:
+        component = issue.get("component", "")
+        if component.startswith(f"{project_key}:"):
+            file_path = component[len(project_key) + 1 :]
+        else:
+            file_path = component
+
+        line_num = issue.get("textRange", {}).get("startLine") or issue.get("line", "?")
+        loc = f"{file_path}:{line_num}"
+
+        severity = issue.get("severity", "UNKNOWN")
+        sev_color = sev_colors.get(severity, "")
+        itype = issue.get("type", "ISSUE")
+        type_badge = type_badges.get(itype, f"[{itype}]")
+
+        rule = issue.get("rule", "")
+        message = issue.get("message", "")
+        resolution = issue.get("resolution")
+        resolution_str = f" ({resolution})" if resolution else ""
+        effort = issue.get("effort") or issue.get("debt")
+        effort_str = f" ~{effort}" if effort else ""
+
+        print(f" • {CLR_BOLD}{loc}{CLR_RESET}")
+        print(
+            f"   {type_badge} {sev_color}{severity}{CLR_RESET}{resolution_str}{effort_str}: "
+            f"{message} ({CLR_CYAN}{rule}{CLR_RESET})"
+        )
+
+        counts[itype] = counts.get(itype, 0) + 1
+
+    print("\n" + "-" * 60)
+    print(f" Total {status_label.lower()} issues displayed: {CLR_BOLD}{len(issues)}{CLR_RESET} of {total}")
+    breakdown = ", ".join(f"{cnt} {t.lower().replace('_', ' ')}s" for t, cnt in sorted(counts.items()))
+    if breakdown:
+        print(f" Breakdown: {breakdown}")
+    print("-" * 60 + "\n")
+
+    return 0
+
+
 def cmd_start(host_url):
     containers = get_docker_containers()
     sonar_containers = [c for c in containers if c["is_app"]]
@@ -403,7 +532,7 @@ def main():
         "command",
         nargs="?",
         default="scan",
-        choices=["scan", "status", "start", "stop", "logs", "open"],
+        choices=["scan", "status", "issues", "start", "stop", "logs", "open"],
         help="Action to execute (default: scan)",
     )
     parser.add_argument("--host", default=None, help=f"SonarQube host URL (default: {DEFAULT_HOST})")
@@ -414,6 +543,12 @@ def main():
     parser.add_argument("--strict", action="store_true", help="Exit with code 1 if Quality Gate fails")
     parser.add_argument("--open", action="store_true", help="Automatically open dashboard after scan")
     parser.add_argument("--lines", type=int, default=100, help="Number of log lines to show (for 'logs' command)")
+    parser.add_argument("--resolved", action="store_true", help="List resolved issues instead of open/unresolved issues")
+    parser.add_argument("--type", "-t", default=None, choices=["BUG", "VULNERABILITY", "CODE_SMELL", "SECURITY_HOTSPOT"], help="Filter issues by type")
+    parser.add_argument("--severity", "-s", default=None, choices=["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"], help="Filter issues by severity")
+    parser.add_argument("--rule", default=None, help="Filter issues by rule ID (e.g. S1172 or python:S1172)")
+    parser.add_argument("--limit", "-n", type=int, default=100, help="Maximum number of issues to fetch (default: 100)")
+    parser.add_argument("--json", action="store_true", help="Output raw JSON results")
 
     args = parser.parse_args()
 
@@ -425,6 +560,8 @@ def main():
         sys.exit(cmd_scan(args, host_url, project_key, token))
     elif args.command == "status":
         sys.exit(cmd_status(host_url, project_key, token))
+    elif args.command == "issues":
+        sys.exit(cmd_issues(args, host_url, project_key, token))
     elif args.command == "start":
         sys.exit(cmd_start(host_url))
     elif args.command == "stop":
