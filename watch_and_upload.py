@@ -36,6 +36,7 @@ EXCLUDE_PATTERNS = [
 ]
 DEBOUNCE_DELAY = 0.5  # seconds to wait for changes to settle
 PID_FILE = os.path.join(PROJECT_DIR, ".mpremote.pid")
+ERR_DEVICE_PORT_NOT_SET = "DEVICE_PORT is not set"
 
 DEVICE_PORT: str | None = None
 background_mpremote_proc = None
@@ -63,27 +64,36 @@ def log_error(msg):
     print(f"{RED}[ERROR]{NC} {msg}")
 
 
-def run_device_command(cmd, max_attempts=3, base_delay=1):
+def _extract_error_message(res: subprocess.CompletedProcess[str]) -> str:
+    raw_err = res.stderr.strip() or res.stdout.strip()
+    err_lines = [line.strip() for line in raw_err.splitlines() if line.strip()]
+    return err_lines[-1] if err_lines else "Command failed"
+
+
+def run_device_command(cmd, max_attempts=3, base_delay=1, timeout=30):
     """Runs an mpremote command on the device with exponential retry and backoff."""
-    attempt = 1
     delay = base_delay
-    while attempt <= max_attempts:
+    for attempt in range(1, max_attempts + 1):
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+            res = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=timeout,
+            )
             if res.returncode == 0:
                 return True, res.stdout, res.stderr
-
-            err_msg = res.stderr.strip() or res.stdout.strip()
-            if attempt < max_attempts:
-                log_warning(f"Attempt {attempt}/{max_attempts} failed ({err_msg}), retrying in {delay}s...")
-                time.sleep(delay)
-                delay *= 4
+            err_msg = _extract_error_message(res)
+        except subprocess.TimeoutExpired:
+            err_msg = f"timed out after {timeout}s"
         except Exception as e:
-            if attempt < max_attempts:
-                log_warning(f"Attempt {attempt}/{max_attempts} error ({e}), retrying in {delay}s...")
-                time.sleep(delay)
-                delay *= 4
-        attempt += 1
+            err_msg = str(e)
+
+        if attempt < max_attempts:
+            log_warning(f"Attempt {attempt}/{max_attempts} failed ({err_msg}), retrying in {delay}s...")
+            time.sleep(delay)
+            delay *= 2
 
     return False, "", "All attempts failed"
 
@@ -156,8 +166,15 @@ def kill_old_mpremote_pid_file():
         try:
             with open(pid_file, "r") as f:
                 pid = int(f.read().strip())
-            os.kill(pid, signal.SIGTERM)
-            log_info(f"Killed old mpremote process from pid file (PID: {pid})")
+            log_info(f"Terminating old mpremote process from pid file (PID: {pid})...")
+            try:
+                os.kill(pid, signal.SIGTERM)
+                time.sleep(0.5)
+                # Check if still running, force kill
+                os.kill(pid, 0)
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
         except Exception:
             pass
         try:
@@ -166,10 +183,50 @@ def kill_old_mpremote_pid_file():
             pass
 
 
+def _get_port_pids(port: str) -> list[int]:
+    try:
+        res = subprocess.run(["lsof", "-t", port], capture_output=True, text=True, timeout=5)
+        if res.returncode != 0 or not res.stdout.strip():
+            return []
+        current_pid = os.getpid()
+        return [int(p) for p in res.stdout.strip().split() if int(p) != current_pid]
+    except Exception:
+        return []
+
+
+def _signal_processes(pids: list[int], sig: int, action_name: str) -> None:
+    for pid in pids:
+        log_info(f"{action_name} process {pid} holding device port...")
+        try:
+            os.kill(pid, sig)
+        except OSError:
+            pass
+
+
+def kill_processes_using_port():
+    """Kills any other processes holding the serial device port open."""
+    if not DEVICE_PORT:
+        return
+    pids = _get_port_pids(DEVICE_PORT)
+    if not pids:
+        return
+    _signal_processes(pids, signal.SIGTERM, "Terminating")
+    time.sleep(0.5)
+    remaining_pids = _get_port_pids(DEVICE_PORT)
+    if remaining_pids:
+        _signal_processes(remaining_pids, signal.SIGKILL, "Force killing")
+        time.sleep(0.5)
+
+
 def stop_running_program():
     """Stops any running program on the device by issuing a reset."""
     kill_running_mpremote()
     kill_old_mpremote_pid_file()
+    kill_processes_using_port()
+
+    if not DEVICE_PORT:
+        log_error(ERR_DEVICE_PORT_NOT_SET)
+        return
 
     log_info("Stopping any running program on device...")
     success, _, err = run_device_command(["mpremote", "connect", DEVICE_PORT, "reset"], max_attempts=3, base_delay=1)
@@ -177,7 +234,13 @@ def stop_running_program():
         log_success("Program stopped")
     else:
         log_warning(f"Failed to stop program: {err}")
-    time.sleep(2)
+
+    # Wait for device port to settle and re-appear after reset
+    for _ in range(10):
+        if os.path.exists(DEVICE_PORT):
+            break
+        time.sleep(0.5)
+    time.sleep(1)
 
 
 def should_exclude(relative_path):
@@ -191,6 +254,10 @@ def should_exclude(relative_path):
 def upload_file(file_path):
     """Uploads a single file to the device."""
     if not os.path.exists(file_path):
+        return
+
+    if not DEVICE_PORT:
+        log_error(ERR_DEVICE_PORT_NOT_SET)
         return
 
     relative_path = os.path.relpath(file_path, PROJECT_DIR)
@@ -223,7 +290,7 @@ def run_main():
 
     try:
         if not DEVICE_PORT:
-            log_error("DEVICE_PORT is not set")
+            log_error(ERR_DEVICE_PORT_NOT_SET)
             return
         # Run main.py in the background, allowing stdout/stderr to stream to the terminal
         background_mpremote_proc = subprocess.Popen(
@@ -241,6 +308,10 @@ def run_main():
 
 def initial_upload():
     """Performs initial upload of all necessary project files."""
+    if not DEVICE_PORT:
+        log_error(ERR_DEVICE_PORT_NOT_SET)
+        return
+
     log_info("Performing initial upload of project files...")
 
     # Upload main.py
@@ -433,7 +504,9 @@ def main():
     check_fswatch()
     detect_device()
 
-    # Initial upload (don't stop program - device might not be running anything yet)
+    # Stop any running program and ensure clean serial access before initial upload
+    stop_running_program()
+
     initial_upload()
 
     run_main()
