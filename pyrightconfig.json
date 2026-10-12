@@ -4,7 +4,9 @@
     ],
     "exclude": [
         "**/__pycache__",
-        ".venv*"
+        ".venv*",
+        "typings",
+        "lib"
     ],
     "stubPath": "./typings",
     "typeCheckingMode": "basic",
