@@ -15,10 +15,10 @@ from core.elm_events import ButtonEvent, NavigationEvent
 from core.elm_inky_app_base import ElmInkyAppBase
 from core.inky_helper import network_connect
 from models.weather_model import WeatherModel
+from utils.constants import API_SERVER_BASE_URL
 from utils.Timer import Timer
 
 FILENAME = "/sd/weather-daily.jpg"
-API_SERVER_BASE_URL = "https://inky-be.princess-donut.com/"
 DEFAULT_ZIPCODE = "94110"  # San Francisco default
 
 
@@ -172,7 +172,7 @@ class WeatherAppElm(ElmInkyAppBase):
             params["height"] = str(self.height)
 
         query_string = "&".join(f"{k}={v}" for k, v in params.items())
-        url = f"{self.be_base_url}/weather/image?{query_string}"
+        url = f"{self.be_base_url.rstrip('/')}/weather/image?{query_string}"
 
         self.logger.info(f"Downloading {view_type} weather for {zipcode} from {url}")
         try:
@@ -206,6 +206,16 @@ class WeatherAppElm(ElmInkyAppBase):
             del data
             gc.collect()
             self.logger.debug("Cleanup complete")
+
+            # Validate that the downloaded file is a valid JPEG
+            with open(FILENAME, "rb") as f:
+                header = f.read(2)
+                if header != b"\xff\xd8":
+                    f.seek(0)
+                    error_preview = f.read(256).decode("utf-8", "ignore")
+                    self.logger.error(f"Downloaded file is not a valid JPEG: {error_preview}")
+                    return False
+
             return True
         except Exception as e:
             self.logger.error(f"Error downloading weather image: {e}")
