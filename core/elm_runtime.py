@@ -83,8 +83,13 @@ class ElmRuntime:
         # Check timers if in ELM mode and not loading
         if self.is_elm_app and not self.loading_action:
             try:
-                timer_event = self.app.on_timer(self.current_model)
-                if timer_event:
+                timer_event = None
+                if hasattr(self.app, "check_timer"):
+                    timer_event = self.app.check_timer(self.current_model)
+                elif hasattr(self.app, "on_timer"):
+                    timer_event = self.app.on_timer(self.current_model)
+
+                if timer_event and timer_event is not self.current_model:
                     self.logger.info("Timer event triggered")
                     self.loading_action = True
                     try:

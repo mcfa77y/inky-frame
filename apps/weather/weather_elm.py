@@ -11,7 +11,7 @@ from urllib import urequest
 import jpegdec
 import network
 
-from core.elm_events import ButtonEvent, NavigationEvent
+from core.elm_events import ButtonEvent, NavigationEvent, TimerEvent
 from core.elm_inky_app_base import ElmInkyAppBase
 from core.inky_helper import network_connect
 from models.weather_model import WeatherModel
@@ -113,22 +113,26 @@ class WeatherAppElm(ElmInkyAppBase):
 
         return model
 
-    def on_refresh(self, model: WeatherModel) -> WeatherModel:
+    def check_timer(self, _model: WeatherModel):
+        """Check if periodic update timer has expired. Returns TimerEvent if expired, else None."""
+        if self.update_timer.is_expired():
+            self.logger.debug("Timer expired, triggering TimerEvent")
+            self.update_timer.reset()
+            self.update_timer.start()
+            return TimerEvent()
+        return None
+
+    def on_refresh(self, model: WeatherModel, event=None) -> WeatherModel:
         """Handle refresh event."""
         current_view = model.weather_views[model.current_view_index]
         self._reset_timer()
         return self._update_weather_and_model(model, model.zipcode, current_view)
 
-    def on_timer(self, model: WeatherModel) -> WeatherModel:
+    def on_timer(self, model: WeatherModel, event=None) -> WeatherModel:
         """Handle timer event for periodic updates."""
-        self.logger.debug("on_timer")
-        if self.update_timer.is_expired():
-            self.logger.debug("Timer expired")
-            current_view = model.weather_views[model.current_view_index]
-            self.update_timer.reset()
-            self.update_timer.start()
-            return self._update_weather_and_model(model, model.zipcode, current_view)
-        return model
+        self.logger.info("Handling TimerEvent: refreshing weather")
+        current_view = model.weather_views[model.current_view_index]
+        return self._update_weather_and_model(model, model.zipcode, current_view)
 
     def view(self, model: WeatherModel) -> None:
         """Pure function: render Model to display."""

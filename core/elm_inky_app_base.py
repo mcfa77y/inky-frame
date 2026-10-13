@@ -51,7 +51,10 @@ class ElmInkyAppBase(InkyAppBase):
         self.logger.debug(f"Handler: {handler_name}")
         if handler_name and hasattr(self, handler_name):
             handler = getattr(self, handler_name)
-            return handler(model, event)
+            try:
+                return handler(model, event)
+            except TypeError:
+                return handler(model)
 
         # If no specific handler, return model unchanged
         return model
@@ -80,9 +83,13 @@ class ElmInkyAppBase(InkyAppBase):
         """Called when a button is pressed. Return an Event to process, or None to ignore."""
         return None
 
-    def on_timer(self, _model):
-        """Called on timer tick. Return an Event to process, or None."""
+    def check_timer(self, _model):
+        """Called each frame to check timers. Return an Event to process, or None."""
         return None
+
+    def on_timer(self, model, _event=None):
+        """Called when TimerEvent is dispatched. Return updated model."""
+        return model
 
     def on_network_response(self, _data: dict, _model):
         """Called when network data arrives. Return an Event to process, or None."""
