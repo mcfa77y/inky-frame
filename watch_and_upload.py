@@ -16,6 +16,11 @@ import time
 from collections.abc import Sequence
 from types import FrameType
 
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = None
+
 # Colors for terminal output
 RED = "\033[0;31m"
 GREEN = "\033[0;32m"
@@ -73,6 +78,42 @@ def _extract_error_message(res: subprocess.CompletedProcess[str]) -> str:
     return err_lines[-1] if err_lines else "Command failed"
 
 
+def _run_with_progress(cmd: Sequence[str] | str, timeout: float) -> subprocess.CompletedProcess[str]:
+    assert tqdm is not None
+    with tqdm(total=timeout, desc="Sending command", unit="s", leave=False) as pbar:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            stdin=subprocess.DEVNULL,
+        )
+        start_time = time.time()
+        while proc.poll() is None:
+            time.sleep(0.1)
+            elapsed = time.time() - start_time
+            pbar.n = min(round(elapsed, 1), float(timeout))
+            pbar.refresh()
+            if timeout and elapsed > timeout:
+                proc.kill()
+                out, err = proc.communicate()
+                raise subprocess.TimeoutExpired(cmd, timeout, output=out, stderr=err)
+        stdout, stderr = proc.communicate()
+        return subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+
+
+def _execute_command(cmd: Sequence[str] | str, timeout: float) -> subprocess.CompletedProcess[str]:
+    if tqdm is not None:
+        return _run_with_progress(cmd, timeout)
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        stdin=subprocess.DEVNULL,
+        timeout=timeout,
+    )
+
+
 def run_device_command(
     cmd: Sequence[str] | str,
     max_attempts: int = 3,
@@ -85,13 +126,7 @@ def run_device_command(
     for attempt in range(1, max_attempts + 1):
         try:
             log_info(f"Sending command: {cmd_str}")
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                stdin=subprocess.DEVNULL,
-                timeout=timeout,
-            )
+            res = _execute_command(cmd, timeout)
             if res.returncode == 0:
                 return True, res.stdout, res.stderr
             err_msg = _extract_error_message(res)
