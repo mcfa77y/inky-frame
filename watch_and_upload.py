@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "tqdm>=4.70.1",
+# ]
+# ///
 
 """
 Inky Frame Watch and Upload Script (Python Edition)
