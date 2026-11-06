@@ -7,11 +7,14 @@ Watches the local directory for changes and uploads modified files to the device
 
 import os
 import re
+import shlex
 import signal
 import subprocess
 import sys
 import threading
 import time
+from collections.abc import Sequence
+from types import FrameType
 
 # Colors for terminal output
 RED = "\033[0;31m"
@@ -21,8 +24,8 @@ BLUE = "\033[0;34m"
 NC = "\033[0m"
 
 # Configuration
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-EXCLUDE_PATTERNS = [
+PROJECT_DIR: str = os.path.dirname(os.path.abspath(__file__))
+EXCLUDE_PATTERNS: list[str] = [
     r"\.git",
     r"\.venv",
     r"__pycache__",
@@ -34,33 +37,33 @@ EXCLUDE_PATTERNS = [
     r"watch_and_upload\.py",
     r"\.mpremote\.pid",
 ]
-DEBOUNCE_DELAY = 0.5  # seconds to wait for changes to settle
-PID_FILE = os.path.join(PROJECT_DIR, ".mpremote.pid")
-ERR_DEVICE_PORT_NOT_SET = "DEVICE_PORT is not set"
+DEBOUNCE_DELAY: float = 0.5  # seconds to wait for changes to settle
+PID_FILE: str = os.path.join(PROJECT_DIR, ".mpremote.pid")
+ERR_DEVICE_PORT_NOT_SET: str = "DEVICE_PORT is not set"
 
 DEVICE_PORT: str | None = None
-background_mpremote_proc = None
-changed_files = set()
-timer = None
-lock = threading.Lock()
-fswatch_proc = None
-cleanup_lock = threading.Lock()
-cleaned_up = False
+background_mpremote_proc: subprocess.Popen[bytes] | None = None
+changed_files: set[str] = set()
+timer: threading.Timer | None = None
+lock: threading.Lock = threading.Lock()
+fswatch_proc: subprocess.Popen[str] | None = None
+cleanup_lock: threading.Lock = threading.Lock()
+cleaned_up: bool = False
 
 
-def log_info(msg):
+def log_info(msg: object) -> None:
     print(f"{BLUE}[INFO]{NC} {msg}")
 
 
-def log_success(msg):
+def log_success(msg: object) -> None:
     print(f"{GREEN}[SUCCESS]{NC} {msg}")
 
 
-def log_warning(msg):
+def log_warning(msg: object) -> None:
     print(f"{YELLOW}[WARNING]{NC} {msg}")
 
 
-def log_error(msg):
+def log_error(msg: object) -> None:
     print(f"{RED}[ERROR]{NC} {msg}")
 
 
@@ -70,11 +73,18 @@ def _extract_error_message(res: subprocess.CompletedProcess[str]) -> str:
     return err_lines[-1] if err_lines else "Command failed"
 
 
-def run_device_command(cmd, max_attempts=3, base_delay=1, timeout=30):
+def run_device_command(
+    cmd: Sequence[str] | str,
+    max_attempts: int = 3,
+    base_delay: float = 1,
+    timeout: float = 30,
+) -> tuple[bool, str, str]:
     """Runs an mpremote command on the device with exponential retry and backoff."""
+    cmd_str = shlex.join(cmd) if isinstance(cmd, (list, tuple)) else str(cmd)
     delay = base_delay
     for attempt in range(1, max_attempts + 1):
         try:
+            log_info(f"Sending command: {cmd_str}")
             res = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -98,7 +108,7 @@ def run_device_command(cmd, max_attempts=3, base_delay=1, timeout=30):
     return False, "", "All attempts failed"
 
 
-def check_fswatch():
+def check_fswatch() -> None:
     """Checks if fswatch is installed."""
     try:
         subprocess.run(
@@ -112,7 +122,7 @@ def check_fswatch():
         sys.exit(1)
 
 
-def detect_device():
+def detect_device() -> None:
     """Detects and connects to the MicroPython Board."""
     global DEVICE_PORT
     log_info("Detecting Inky Frame device...")
@@ -136,7 +146,7 @@ def detect_device():
         sys.exit(1)
 
 
-def kill_running_mpremote():
+def kill_running_mpremote() -> None:
     """Kills any active background mpremote process started by this script."""
     global background_mpremote_proc
     if background_mpremote_proc is not None:
@@ -159,7 +169,7 @@ def kill_running_mpremote():
             background_mpremote_proc = None
 
 
-def kill_old_mpremote_pid_file():
+def kill_old_mpremote_pid_file() -> None:
     """Kills any leftover background mpremote processes from previous runs using the PID file."""
     pid_file = PID_FILE
     if os.path.exists(pid_file):
@@ -203,7 +213,7 @@ def _signal_processes(pids: list[int], sig: int, action_name: str) -> None:
             pass
 
 
-def kill_processes_using_port():
+def kill_processes_using_port() -> None:
     """Kills any other processes holding the serial device port open."""
     if not DEVICE_PORT:
         return
@@ -218,7 +228,7 @@ def kill_processes_using_port():
         time.sleep(0.5)
 
 
-def stop_running_program():
+def stop_running_program() -> None:
     """Stops any running program on the device by issuing a reset."""
     kill_running_mpremote()
     kill_old_mpremote_pid_file()
@@ -243,7 +253,7 @@ def stop_running_program():
     time.sleep(1)
 
 
-def should_exclude(relative_path):
+def should_exclude(relative_path: str) -> bool:
     """Returns True if the path matches any of the exclude patterns."""
     for pattern in EXCLUDE_PATTERNS:
         if re.search(pattern, relative_path):
@@ -251,7 +261,7 @@ def should_exclude(relative_path):
     return False
 
 
-def upload_file(file_path):
+def upload_file(file_path: str) -> None:
     """Uploads a single file to the device."""
     if not os.path.exists(file_path):
         return
@@ -282,7 +292,7 @@ def upload_file(file_path):
             time.sleep(1)
 
 
-def run_main():
+def run_main() -> None:
     """Runs main.py on the device in the background."""
     global background_mpremote_proc
     log_info("Running main.py on device...")
@@ -306,7 +316,7 @@ def run_main():
         log_error(f"Failed to start main.py: {e}")
 
 
-def initial_upload():
+def initial_upload() -> None:
     """Performs initial upload of all necessary project files."""
     if not DEVICE_PORT:
         log_error(ERR_DEVICE_PORT_NOT_SET)
@@ -358,7 +368,7 @@ def initial_upload():
     log_success("Initial upload complete")
 
 
-def process_changes():
+def process_changes() -> None:
     """Callback function executed after the debounce period ends."""
     global timer
     with lock:
@@ -382,7 +392,7 @@ def process_changes():
     run_main()
 
 
-def watch_changes():
+def watch_changes() -> None:
     """Watches the directory for changes using fswatch."""
     global timer, fswatch_proc
     log_info(f"Watching for file changes in {PROJECT_DIR}")
@@ -455,7 +465,7 @@ def watch_changes():
         log_error(f"fswatch watcher error: {e}")
 
 
-def cleanup(signum=None, frame=None):
+def cleanup(signum: int | None = None, frame: FrameType | None = None) -> None:
     """Performs clean shutdown on termination."""
     global cleaned_up, timer, fswatch_proc
     with cleanup_lock:
@@ -498,7 +508,7 @@ signal.signal(signal.SIGINT, cleanup)
 signal.signal(signal.SIGTERM, cleanup)
 
 
-def main():
+def main() -> None:
     log_info("=== Inky Frame Watch and Upload Script (Python Edition) ===")
 
     check_fswatch()
