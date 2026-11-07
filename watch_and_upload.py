@@ -399,6 +399,8 @@ def initial_upload() -> None:
             )
             if not success:
                 log_error(f"Failed to upload {d}/: {err}")
+            # Remove host __pycache__ from device flash if copied
+            run_device_command(["mpremote", "connect", DEVICE_PORT, "rm", "-r", f":{d}/__pycache__"], max_attempts=1)
             time.sleep(1)
 
     # Upload secrets.py
