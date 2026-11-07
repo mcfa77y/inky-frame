@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "MicroPython applications and framework for Pimoroni Inky Frame"
 requires-python = ">=3.11"
 dependencies = [
+    "simple-chalk>=0.1.0",
     "tqdm>=4.70.1",
 ]
 
