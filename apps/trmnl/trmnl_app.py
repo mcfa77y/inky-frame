@@ -309,20 +309,17 @@ class TRMNLApp(InkyAppBase):
         """Button A: advance to next playlist item."""
         self.logger.info("Button A pressed: advance TRMNL playlist")
         self.update(advance_playlist=True)
-        self.draw()
 
     def button_b_press(self):
         """Button B: refresh current screen without advancing playlist."""
         self.logger.info("Button B pressed: reload current TRMNL screen")
         self.update(advance_playlist=False)
-        self.draw()
 
     def button_c_press(self):
         """Button C: re-check setup and pair."""
         self.logger.info("Button C pressed: retry setup/pair")
         self.api_key = ""
         self.update(advance_playlist=True)
-        self.draw()
 
     def draw(self):
         """Render downloaded TRMNL image or setup screen to Inky Frame display."""

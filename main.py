@@ -17,20 +17,20 @@ def main():
     inky_utils.clear_button_leds()
     inky_utils.led_warn.off()
 
-    # Default to Weather app on boot (no state.json dependency)
-    from apps.weather.weather_elm import app as weatherApp
+    # Default to TRMNL app on boot
+    from apps.trmnl.trmnl_app import app as trmnlApp
 
-    main_logger.info("Defaulting to Weather app on boot")
+    main_logger.info("Defaulting to TRMNL app on boot")
 
     inky_utils.network_connect()
 
     # Get some memory back, we really need it!
     gc.collect()
 
-    # Initialize ELM runtime with the weather app and launcher
-    runtime = ElmRuntime(weatherApp, launcher_app=launcherApp)
+    # Initialize runtime with TRMNL app and launcher
+    runtime = ElmRuntime(trmnlApp, launcher_app=launcherApp)
     runtime.start()
-    main_logger.info("Starting ELM event-driven mode - Button E returns to launcher")
+    main_logger.info("Starting event-driven mode - Button E returns to launcher")
 
     # Interactive main loop - check for button presses and handle navigation
     while True:

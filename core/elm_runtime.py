@@ -6,10 +6,13 @@ for ELM-architected applications. This is the platform/runtime layer
 that bridges hardware events to the app's update/view cycle.
 """
 
+import time
+
 import inky_frame
 
 from core.elm_events import ButtonEvent
 from core.elm_inky_app_base import ElmInkyAppBase
+from core.inky_app_base import InkyAppBase
 from core.inky_helper import start_wave_pattern, stop_wave_pattern
 from core.logger import Logger
 
@@ -17,12 +20,12 @@ from core.logger import Logger
 class ElmRuntime:
     """Runtime for ELM-architected Inky Frame apps."""
 
-    def __init__(self, app, launcher_app=None):
+    def __init__(self, app: ElmInkyAppBase | InkyAppBase, launcher_app=None):
         """Initialize the runtime with an app and optional launcher."""
-        self.app: ElmInkyAppBase = app
+        self.app: ElmInkyAppBase | InkyAppBase = app
         self.launcher_app = launcher_app
         self.logger = Logger(default_context={"app": "ElmRuntime"})
-
+        self._last_legacy_update: float | None = None
         # Button state tracking
         self.button_states = {
             "a": False,
@@ -46,20 +49,22 @@ class ElmRuntime:
         self.current_model = None
 
         # Detect if app is ELM-based
-        self.is_elm_app = hasattr(app, "init") and hasattr(app, "update") and hasattr(app, "view")
+        self.is_elm_app = isinstance(app, ElmInkyAppBase)
 
         self.logger.info(f"Runtime initialized. ELM mode: {self.is_elm_app}")
 
     def start(self):
         """Start the runtime and initialize the app."""
-        if self.is_elm_app:
+        if isinstance(self.app, ElmInkyAppBase):
             self.current_model = self.app.init()
             self.app.on_init(self.current_model)
             self.app.view(self.current_model)
             self.logger.info("ELM app started")
         else:
-            print("rewrite app using  ElmInkyAppBase")
-            raise TypeError("wrong app type")
+            self.app.update()
+            self.app.draw()
+            self._last_legacy_update = time.time()
+            self.logger.info("Legacy app started")
 
     def handle_events(self):
         """Process button events and dispatch to app."""
@@ -80,25 +85,56 @@ class ElmRuntime:
             # Update button state
             self.button_states[button_name] = current_state
 
-        # Check timers if in ELM mode and not loading
-        if self.is_elm_app and not self.loading_action:
-            try:
-                timer_event = None
-                if hasattr(self.app, "check_timer"):
-                    timer_event = self.app.check_timer(self.current_model)
-                elif hasattr(self.app, "on_timer"):
-                    timer_event = self.app.on_timer(self.current_model)
+        if not self.loading_action:
+            if self.is_elm_app:
+                self._check_elm_timer()
+            else:
+                self._check_legacy_timer()
 
-                if timer_event and timer_event is not self.current_model:
-                    self.logger.info("Timer event triggered")
-                    self.loading_action = True
-                    try:
-                        self.current_model = self.app.update(self.current_model, timer_event)
-                        self.app.view(self.current_model)
-                    finally:
-                        self.loading_action = False
-            except Exception as e:
-                self.logger.error(f"Error handling timer event: {e}")
+    def _check_elm_timer(self):
+        """Check timer for ELM apps."""
+        if not isinstance(self.app, ElmInkyAppBase):
+            return
+        try:
+            timer_event = None
+            if hasattr(self.app, "check_timer"):
+                timer_event = getattr(self.app, "check_timer")(self.current_model)
+            elif hasattr(self.app, "on_timer"):
+                timer_event = getattr(self.app, "on_timer")(self.current_model)
+
+            if timer_event and timer_event is not self.current_model:
+                self.logger.info("Timer event triggered")
+                self.loading_action = True
+                try:
+                    self.current_model = self.app.update(self.current_model, timer_event)
+                    self.app.view(self.current_model)
+                finally:
+                    self.loading_action = False
+        except Exception as e:
+            self.logger.error(f"Error handling timer event: {e}")
+
+    def _check_legacy_timer(self):
+        """Check periodic refresh timer for legacy apps."""
+        update_interval = getattr(self.app, "update_interval", 0)
+        if update_interval <= 0:
+            return
+
+        current_time = time.time()
+        if self._last_legacy_update is None:
+            self._last_legacy_update = current_time
+            return
+
+        if current_time - self._last_legacy_update >= update_interval:
+            self.logger.info("Periodic update triggered")
+            self._last_legacy_update = current_time
+            self.loading_action = True
+            try:
+                if hasattr(self.app, "update"):
+                    self.app.update()
+                if hasattr(self.app, "draw"):
+                    self.app.draw()
+            finally:
+                self.loading_action = False
 
     def on_button_press(self, button_name: str):
         """Handle a single button press event."""
@@ -121,6 +157,8 @@ class ElmRuntime:
 
     def _dispatch_elm_event(self, button_name: str):
         """Dispatch button event to ELM app."""
+        if not isinstance(self.app, ElmInkyAppBase):
+            return
         if button_name == "e" and self.launcher_app:
             # Home button - return to launcher
             self.logger.info("Home button pressed - returning to launcher")
@@ -133,6 +171,11 @@ class ElmRuntime:
 
     def _dispatch_legacy_event(self, button_name: str):
         """Dispatch button event to legacy app."""
+        if button_name == "e" and self.launcher_app:
+            self.logger.info("Home button pressed - returning to launcher")
+            self.switch_app(self.launcher_app)
+            return
+
         button_method = f"button_{button_name}_press"
         if hasattr(self.app, button_method):
             getattr(self.app, button_method)()
@@ -144,5 +187,5 @@ class ElmRuntime:
     def switch_app(self, new_app):
         """Switch to a different app."""
         self.app = new_app
-        self.is_elm_app = hasattr(new_app, "init") and hasattr(new_app, "update") and hasattr(new_app, "view")
+        self.is_elm_app = isinstance(new_app, ElmInkyAppBase)
         self.start()
