@@ -124,7 +124,7 @@ def run_device_command(
     cmd: Sequence[str] | str,
     max_attempts: int = 3,
     base_delay: float = 1,
-    timeout: float = 30,
+    timeout: float = 90,
 ) -> tuple[bool, str, str]:
     """Runs an mpremote command on the device with exponential retry and backoff."""
     cmd_str = shlex.join(cmd) if isinstance(cmd, (list, tuple)) else str(cmd)
@@ -319,6 +319,14 @@ def upload_file(file_path: str) -> None:
     if ext in [".py", ".json"]:
         log_info(f"Uploading: {relative_path}")
         target_path = f":{relative_path}"
+        parent_dir = os.path.dirname(relative_path)
+        if parent_dir:
+            parts = parent_dir.replace("\\", "/").split("/")
+            curr = ""
+            for part in parts:
+                if part:
+                    curr = f"{curr}/{part}" if curr else part
+                    run_device_command(["mpremote", "connect", DEVICE_PORT, "mkdir", f":{curr}"], max_attempts=1)
 
         success, _, err = run_device_command(
             ["mpremote", "connect", DEVICE_PORT, "cp", file_path, target_path],
@@ -385,7 +393,7 @@ def initial_upload() -> None:
         if os.path.isdir(dir_path):
             log_info(f"Uploading {d}/ directory...")
             success, _, err = run_device_command(
-                ["mpremote", "connect", DEVICE_PORT, "cp", "-r", dir_path, f":{d}"],
+                ["mpremote", "connect", DEVICE_PORT, "cp", "-r", dir_path, ":"],
                 max_attempts=5,
                 base_delay=1,
             )
