@@ -134,6 +134,31 @@ class TRMNLApp(InkyAppBase):
             self.logger.error(f"Error downloading TRMNL image: {e}")
             return False
 
+    def _draw_bmp_byte_pixels(self, byte_val: int, x: int, y: int, width: int, pen_0: int, pen_1: int):
+        for bit in range(8):
+            px = x + bit
+            if px >= width:
+                break
+            pen = pen_1 if (byte_val & (0x80 >> bit)) else pen_0
+            self.graphics.set_pen(pen)
+            self.graphics.pixel(px, y)
+
+    def _draw_bmp_row(self, row_buf: bytearray, y: int, width: int, pen_0: int, pen_1: int):
+        """Draw a single unpacked row of 1-bit BMP bytes to the framebuffer."""
+        x = 0
+        for byte_val in row_buf:
+            if x >= width:
+                break
+            if byte_val == 0xFF:
+                self.graphics.set_pen(pen_1)
+                self.graphics.pixel_span(x, y, min(8, width - x))
+            elif byte_val == 0x00:
+                self.graphics.set_pen(pen_0)
+                self.graphics.pixel_span(x, y, min(8, width - x))
+            else:
+                self._draw_bmp_byte_pixels(byte_val, x, y, width, pen_0, pen_1)
+            x += 8
+
     def decode_1bit_bmp(self, filename: str) -> bool:
         """Decode uncompressed 1-bit BMP directly onto Inky Frame framebuffer."""
         try:
@@ -149,7 +174,6 @@ class TRMNLApp(InkyAppBase):
                     self.logger.error(f"Unsupported BMP format: bpp={bpp}, comp={compression}")
                     return False
 
-                # Read 2 palette entries (8 bytes: B, G, R, 0)
                 palette_data = f.read(8)
                 c0_brightness = palette_data[0] + palette_data[1] + palette_data[2]
                 c1_brightness = palette_data[4] + palette_data[5] + palette_data[6]
@@ -165,31 +189,9 @@ class TRMNLApp(InkyAppBase):
 
                 for r in range(abs_height):
                     y = r if top_down else (abs_height - 1 - r)
-                    n = f.readinto(row_buf)
-                    if n < row_bytes:
+                    if f.readinto(row_buf) < row_bytes:
                         break
-
-                    x = 0
-                    for byte_val in row_buf:
-                        if x >= width:
-                            break
-                        if byte_val == 0xFF:
-                            span = min(8, width - x)
-                            self.graphics.set_pen(pen_1)
-                            self.graphics.pixel_span(x, y, span)
-                        elif byte_val == 0x00:
-                            span = min(8, width - x)
-                            self.graphics.set_pen(pen_0)
-                            self.graphics.pixel_span(x, y, span)
-                        else:
-                            for bit in range(8):
-                                px = x + bit
-                                if px >= width:
-                                    break
-                                pen = pen_1 if (byte_val & (0x80 >> bit)) else pen_0
-                                self.graphics.set_pen(pen)
-                                self.graphics.pixel(px, y)
-                        x += 8
+                    self._draw_bmp_row(row_buf, y, width, pen_0, pen_1)
             return True
         except Exception as e:
             self.logger.error(f"Error decoding 1-bit BMP: {e}")
@@ -234,23 +236,54 @@ class TRMNLApp(InkyAppBase):
         g.text("Button A: Refresh / Pair    Button B: Reload Current", 30, h - 30, scale=2)
         self.graphics.update()
 
+    def _handle_setup_provisioning(self) -> bool:
+        """Attempt auto-provisioning via /api/setup if API key is not configured."""
+        if self.api_key:
+            return True
+
+        setup_data = self.request_setup()
+        if setup_data:
+            self.api_key = setup_data.get("api_key", "")
+            self.friendly_id = setup_data.get("friendly_id", "")
+            self.setup_message = setup_data.get("message", "")
+            setup_img = setup_data.get("image_url")
+            if setup_img and self.download_image(setup_img):
+                self.has_image = True
+                return False
+
+        self.has_image = False
+        return bool(self.api_key)
+
+    def _handle_display_image(self, metadata: dict) -> bool:
+        """Download or reuse cached screen image from TRMNL metadata."""
+        image_url = metadata.get("image_url")
+        if not image_url:
+            self.show_error("No image returned from TRMNL")
+            self.graphics.update()
+            self.has_image = False
+            return False
+
+        filename = metadata.get("filename", "")
+        if filename and filename == self.current_filename:
+            self.logger.info(f"Image {filename} already cached, skipping download")
+            self.has_image = True
+            return True
+
+        if self.download_image(image_url):
+            self.has_image = True
+            if filename:
+                self.current_filename = filename
+            return True
+
+        self.show_error("Failed to download TRMNL screen")
+        self.graphics.update()
+        self.has_image = False
+        return False
+
     def update(self, advance_playlist: bool = True):
         """Fetch next (or current) screen from TRMNL API or request setup."""
-        if not self.api_key:
-            setup_data = self.request_setup()
-            if setup_data:
-                self.api_key = setup_data.get("api_key", "")
-                self.friendly_id = setup_data.get("friendly_id", "")
-                self.setup_message = setup_data.get("message", "")
-                setup_img = setup_data.get("image_url")
-                if setup_img:
-                    if self.download_image(setup_img):
-                        self.has_image = True
-                        return
-
-            if not self.api_key:
-                self.has_image = False
-                return
+        if not self._handle_setup_provisioning():
+            return
 
         endpoint = "/api/display" if advance_playlist else "/api/display/current"
         metadata = self.fetch_display_metadata(endpoint)
@@ -260,37 +293,13 @@ class TRMNLApp(InkyAppBase):
             self.has_image = False
             return
 
-        status = metadata.get("status")
-        if status == 202:
+        if metadata.get("status") == 202:
             self.setup_message = "Device pending approval on server..."
             setup_img = metadata.get("image_url")
-            if setup_img and self.download_image(setup_img):
-                self.has_image = True
-            else:
-                self.has_image = False
+            self.has_image = bool(setup_img and self.download_image(setup_img))
             return
 
-        image_url = metadata.get("image_url")
-        if not image_url:
-            self.show_error("No image returned from TRMNL")
-            self.graphics.update()
-            self.has_image = False
-            return
-
-        filename = metadata.get("filename", "")
-        if filename and filename == self.current_filename:
-            self.logger.info(f"Image {filename} already cached, skipping download")
-            self.has_image = True
-        else:
-            success = self.download_image(image_url)
-            if success:
-                self.has_image = True
-                if filename:
-                    self.current_filename = filename
-            else:
-                self.show_error("Failed to download TRMNL screen")
-                self.graphics.update()
-                self.has_image = False
+        self._handle_display_image(metadata)
 
         api_refresh = metadata.get("refresh_rate")
         if isinstance(api_refresh, int) and api_refresh >= 60:
