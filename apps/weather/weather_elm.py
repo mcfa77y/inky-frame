@@ -28,7 +28,7 @@ class WeatherAppElm(ElmInkyAppBase):
     def __init__(self):
         super().__init__()
         self.be_base_url = API_SERVER_BASE_URL
-        self.update_timer = Timer(duration_seconds=10 * 60)
+        self.update_timer = Timer(duration_seconds=30 * 60)
         self.logger.set_min_level("DEBUG")
 
         # Setup SD card
@@ -54,7 +54,7 @@ class WeatherAppElm(ElmInkyAppBase):
             model.error_message = ""
         else:
             model.is_loading = False
-            model.error_message = "Unable to download weather image!"
+            model.error_message = "00 Unable to download weather image!"
         self.update_timer.start()
 
     def on_exit(self, model: WeatherModel) -> None:
@@ -67,7 +67,7 @@ class WeatherAppElm(ElmInkyAppBase):
         if success:
             return model.with_loading(False).with_error("")
         else:
-            return model.with_error("Unable to download weather image!")
+            return model.with_error("01 Unable to download weather image!")
 
     def on_button(self, model: WeatherModel, event: ButtonEvent) -> WeatherModel:
         """Handle button press events."""

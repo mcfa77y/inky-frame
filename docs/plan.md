@@ -152,8 +152,9 @@ from dataclasses import dataclass
 from typing import Callable, TypeVar, Generic, Optional
 from abc import ABC, abstractmethod
 
-Model = TypeVar('Model')
-Event = TypeVar('Event')
+Model = TypeVar("Model")
+Event = TypeVar("Event")
+
 
 @dataclass
 class ElmInkyAppBase(Generic[Model, Event], ABC):
@@ -238,18 +239,23 @@ Define a unified event type for all interactions:
 class ButtonEvent:
     button: str  # 'a', 'b', 'c', 'd', 'e'
 
+
 @dataclass
 class TimerEvent:
     pass  # Periodic update trigger
+
 
 @dataclass
 class NetworkEvent:
     data: dict  # API response data
 
+
 @dataclass
 class HomeEvent:
     """Event triggered when user presses E to return to launcher"""
+
     pass
+
 
 Event = ButtonEvent | TimerEvent | NetworkEvent | HomeEvent
 ```
@@ -290,20 +296,20 @@ class WeatherApp(ElmInkyAppBase[WeatherModel, Event]):
             weather_views=["current", "forecast", "today"],
             image_path="/sd/weather-daily.jpg",
             last_update_time=0,
-            is_loading=False
+            is_loading=False,
         )
 
     def update(self, model: WeatherModel, event: Event) -> WeatherModel:
         if isinstance(event, ButtonEvent):
-            if event.button == 'a':
+            if event.button == "a":
                 # Previous view
                 new_index = (model.current_view_index - 1) % len(model.weather_views)
                 return dataclasses.replace(model, current_view_index=new_index, is_loading=True)
-            elif event.button == 'b':
+            elif event.button == "b":
                 # Next view
                 new_index = (model.current_view_index + 1) % len(model.weather_views)
                 return dataclasses.replace(model, current_view_index=new_index, is_loading=True)
-            elif event.button == 'c':
+            elif event.button == "c":
                 # Refresh current view
                 return dataclasses.replace(model, is_loading=True)
 

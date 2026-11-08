@@ -24,7 +24,19 @@ try:
 except ImportError:
     TRMNL_DEVICE_ID = ""
 
-IMAGE_FILENAME = "/sd/trmnl-display.img"
+
+def resolve_image_filename() -> str:
+    """Return /sd/trmnl-display.img if SD is mounted, else fallback to flash."""
+    try:
+        import uos  # type: ignore[import-not-found]
+
+        uos.stat("/sd")
+        return "/sd/trmnl-display.img"
+    except (OSError, AttributeError, ImportError):
+        return "/trmnl-display.img"
+
+
+IMAGE_FILENAME = resolve_image_filename()
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 JPEG_MAGIC = b"\xff\xd8"
 BMP_MAGIC = b"BM"
@@ -48,6 +60,7 @@ class TRMNLApp(InkyAppBase):
         self.api_key = TRMNL_API_KEY if api_key is None else api_key
         raw_base = TRMNL_BASE_URL if base_url is None else base_url
         self.base_url = (raw_base or "http://byos.local").rstrip("/")
+        self.host = self.base_url.split("://", 1)[-1].split("/", 1)[0]
         self.device_id = TRMNL_DEVICE_ID if device_id is None else device_id
         self.refresh_rate = 900  # Default 15 min refresh per TRMNL spec
         self.friendly_id = ""
@@ -73,9 +86,10 @@ class TRMNLApp(InkyAppBase):
         """Call /api/setup to pair or provision device on the TRMNL server."""
         url = f"{self.base_url}/api/setup"
         headers = {
+            "Host": self.host,
             "ID": self.device_id,
             "FW-Version": FW_VERSION,
-            "Model": "og",
+            "Model": "inky_frame_7_3",
             "Content-Type": "application/json",
         }
         try:
@@ -92,10 +106,11 @@ class TRMNLApp(InkyAppBase):
         """Call TRMNL Display API and return response metadata."""
         url = f"{self.base_url}{endpoint}"
         headers = {
+            "Host": self.host,
             "ID": self.device_id,
             "Access-Token": self.api_key,
             "FW-Version": FW_VERSION,
-            "Model": "og",
+            "Model": "inky_frame_7_3",
             "Width": str(self.width or 800),
             "Height": str(self.height or 480),
             "Content-Type": "application/json",
@@ -114,13 +129,27 @@ class TRMNLApp(InkyAppBase):
             self.logger.error(f"Failed to query TRMNL Display API: {e}")
             return None
 
+    def _normalize_image_url(self, image_url: str) -> str:
+        """Ensure image URL includes scheme, host, and port matching base_url if omitted."""
+        if image_url.startswith("/"):
+            return f"{self.base_url}{image_url}"
+        base_proto, _, base_host = self.base_url.partition("://")
+        if ":" in base_host:
+            host_only = base_host.split(":", 1)[0]
+            prefix = f"{base_proto}://{host_only}/"
+            if image_url.startswith(prefix):
+                return f"{self.base_url}/" + image_url[len(prefix) :]
+        return image_url
+
     def download_image(self, image_url: str) -> bool:
         """Download remote image to SD card in chunks to minimize heap usage."""
+        image_url = self._normalize_image_url(image_url)
         try:
             self.logger.info(f"Downloading TRMNL image from {image_url}")
             sock = urequest.urlopen(image_url)
             buf = bytearray(1024)
-            with open(IMAGE_FILENAME, "wb") as f:
+            img_path = resolve_image_filename()
+            with open(img_path, "wb") as f:
                 while True:
                     n = sock.readinto(buf)
                     if n == 0:
@@ -331,8 +360,9 @@ class TRMNLApp(InkyAppBase):
         self.graphics.set_pen(1)
         self.graphics.clear()
 
+        img_path = resolve_image_filename()
         try:
-            with open(IMAGE_FILENAME, "rb") as f:
+            with open(img_path, "rb") as f:
                 header = f.read(8)
         except OSError as e:
             self.logger.error(f"Cannot read image file: {e}")
@@ -343,15 +373,14 @@ class TRMNLApp(InkyAppBase):
         try:
             if header.startswith(PNG_MAGIC):
                 png = pngdec.PNG(self.graphics)
-                png.open_file(IMAGE_FILENAME)
+                png.open_file(img_path)
                 png.decode(0, 0)
             elif header.startswith(JPEG_MAGIC):
                 jpeg = jpegdec.JPEG(self.graphics)
-                jpeg.open_file(IMAGE_FILENAME)
+                jpeg.open_file(img_path)
                 jpeg.decode()
             elif header.startswith(BMP_MAGIC):
-                if not self.decode_1bit_bmp(IMAGE_FILENAME):
-                    self.show_error("Failed to decode 1-bit BMP")
+                if not self.decode_1bit_bmp(img_path):
                     self.graphics.update()
                     return
             else:

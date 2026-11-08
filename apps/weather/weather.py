@@ -66,7 +66,7 @@ class WeatherApp(InkyAppBase):
             gc.collect()
         except Exception as e:
             self.logger.error(f"Error downloading weather image: {e}")
-            self.show_error("Unable to download weather image!")
+            self.show_error("03 Unable to download weather image!")
 
     def next_weather_view(self):
         """Go to the next weather view"""

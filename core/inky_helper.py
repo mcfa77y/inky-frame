@@ -197,22 +197,42 @@ def clear_button_leds():
     inky_frame.button_e.led_off()
 
 
-def network_connect():
+def network_connect() -> bool:
     ssid = WIFI_SSID
     password = WIFI_PASSWORD
     inky_helper_logger.debug(f"network_connect called with SSID={ssid}")
-    # Enable the Wireless
     wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
 
-    # Number of attempts to make before timeout
+    if wlan.isconnected():
+        inky_helper_logger.debug("WiFi already connected")
+        return True
+
     max_wait = 10
-
-    # Sets the Wireless LED pulsing and attempts to connect to your local network.
     pulse_network_led()
-    wlan.config(pm=0xA11140)  # Turn WiFi power saving off for some slow APs
-    wlan.connect(ssid, password)
-    inky_helper_logger.debug("Attempting WiFi connection")
+
+    for attempt in range(2):
+        try:
+            if not wlan.active():
+                wlan.active(True)
+            wlan.config(pm=0xA11140)  # Turn WiFi power saving off for some slow APs
+            wlan.connect(ssid, password)
+            inky_helper_logger.debug("Attempting WiFi connection")
+            break
+        except OSError as e:
+            inky_helper_logger.warning(f"WiFi connect attempt {attempt + 1} failed: {e}")
+            try:
+                wlan.active(False)
+            except Exception:
+                pass
+            time.sleep(0.5)
+            try:
+                wlan.active(True)
+            except Exception:
+                pass
+            if attempt == 1:
+                stop_network_led()
+                led_warn.on()
+                return False
 
     while max_wait > 0:
         if wlan.status() < 0 or wlan.status() >= 3:
@@ -239,8 +259,10 @@ def network_connect():
         inky_helper_logger.debug(f"WiFi connection failed with status {status} ({reason})")
         stop_network_led()
         led_warn.on()
-    else:
-        inky_helper_logger.debug("WiFi connection successful")
+        return False
+
+    inky_helper_logger.debug("WiFi connection successful")
+    return True
 
 
 state = {"run": None}
