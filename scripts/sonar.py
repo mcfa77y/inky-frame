@@ -366,6 +366,36 @@ def cmd_status(host_url, project_key, token):
     return 0
 
 
+def _print_single_issue(issue, project_key, sev_colors, type_badges):
+    component = issue.get("component", "")
+    if component.startswith(f"{project_key}:"):
+        file_path = component[len(project_key) + 1 :]
+    else:
+        file_path = component
+
+    line_num = issue.get("textRange", {}).get("startLine") or issue.get("line", "?")
+    loc = f"{file_path}:{line_num}"
+
+    severity = issue.get("severity", "UNKNOWN")
+    sev_color = sev_colors.get(severity, "")
+    itype = issue.get("type", "ISSUE")
+    type_badge = type_badges.get(itype, f"[{itype}]")
+
+    rule = issue.get("rule", "")
+    message = issue.get("message", "")
+    resolution = issue.get("resolution")
+    resolution_str = f" ({resolution})" if resolution else ""
+    effort = issue.get("effort") or issue.get("debt")
+    effort_str = f" ~{effort}" if effort else ""
+
+    print(f" • {CLR_BOLD}{loc}{CLR_RESET}")
+    print(
+        f"   {type_badge} {sev_color}{severity}{CLR_RESET}{resolution_str}{effort_str}: "
+        f"{message} ({CLR_CYAN}{rule}{CLR_RESET})"
+    )
+    return itype
+
+
 def cmd_issues(args, host_url, project_key, token):
     is_up, status_str, _ = check_api_health(host_url)
     if not is_up:
@@ -418,33 +448,7 @@ def cmd_issues(args, host_url, project_key, token):
 
     counts = {}
     for issue in issues:
-        component = issue.get("component", "")
-        if component.startswith(f"{project_key}:"):
-            file_path = component[len(project_key) + 1 :]
-        else:
-            file_path = component
-
-        line_num = issue.get("textRange", {}).get("startLine") or issue.get("line", "?")
-        loc = f"{file_path}:{line_num}"
-
-        severity = issue.get("severity", "UNKNOWN")
-        sev_color = sev_colors.get(severity, "")
-        itype = issue.get("type", "ISSUE")
-        type_badge = type_badges.get(itype, f"[{itype}]")
-
-        rule = issue.get("rule", "")
-        message = issue.get("message", "")
-        resolution = issue.get("resolution")
-        resolution_str = f" ({resolution})" if resolution else ""
-        effort = issue.get("effort") or issue.get("debt")
-        effort_str = f" ~{effort}" if effort else ""
-
-        print(f" • {CLR_BOLD}{loc}{CLR_RESET}")
-        print(
-            f"   {type_badge} {sev_color}{severity}{CLR_RESET}{resolution_str}{effort_str}: "
-            f"{message} ({CLR_CYAN}{rule}{CLR_RESET})"
-        )
-
+        itype = _print_single_issue(issue, project_key, sev_colors, type_badges)
         counts[itype] = counts.get(itype, 0) + 1
 
     print("\n" + "-" * 60)
@@ -499,14 +503,19 @@ def cmd_stop():
         print(f"{CLR_YELLOW}[INFO]{CLR_RESET} No SonarQube containers found to stop.")
         return 0
 
+    had_failure = False
     for c in containers:
         if c["running"]:
             print(f"{CLR_CYAN}[INFO]{CLR_RESET} Stopping container '{c['name']}'...")
-            subprocess.run(["docker", "stop", c["name"]], check=True)
-            print(f"{CLR_GREEN}[OK]{CLR_RESET} Stopped '{c['name']}'.")
+            try:
+                subprocess.run(["docker", "stop", c["name"]], check=True)
+                print(f"{CLR_GREEN}[OK]{CLR_RESET} Stopped '{c['name']}'.")
+            except subprocess.SubprocessError as e:
+                print(f"{CLR_RED}[ERROR]{CLR_RESET} Failed to stop '{c['name']}': {e}")
+                had_failure = True
         else:
             print(f"{CLR_YELLOW}[INFO]{CLR_RESET} Container '{c['name']}' is already stopped.")
-    return 0
+    return 1 if had_failure else 0
 
 
 def cmd_logs(lines):

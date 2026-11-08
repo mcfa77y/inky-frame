@@ -18,6 +18,7 @@ Commands:
     format    Format all files using ruff
     pyright   Run pyright static type analysis
     ruff      Run ruff linter check
+    sonar     Run SonarQube operations (scan, status, issues, start, stop, open)
 """
 
 import argparse
@@ -96,6 +97,13 @@ def cmd_check(args: argparse.Namespace) -> int:
         if ret != 0:
             failures += 1
 
+    if getattr(args, "with_sonar", False):
+        # 4. SonarQube quality gate check
+        sonar_script = os.path.join(os.path.dirname(__file__), "sonar.py")
+        ret = run_command(["uv", "run", sonar_script, "scan", "--strict"], "SonarQube Quality Gate")
+        if ret != 0:
+            failures += 1
+
     print()
     if failures == 0:
         log_success("All checks passed successfully! ✨")
@@ -160,6 +168,24 @@ def cmd_ruff(args: argparse.Namespace) -> int:
     return run_command(cmd, "Ruff")
 
 
+def cmd_sonar(args: argparse.Namespace) -> int:
+    """Run SonarQube operations via scripts/sonar.py."""
+    sonar_script = os.path.join(os.path.dirname(__file__), "sonar.py")
+    subcmd = args.action or "scan"
+    cmd = ["uv", "run", sonar_script, subcmd]
+    if getattr(args, "strict", False):
+        cmd.append("--strict")
+    if getattr(args, "open", False):
+        cmd.append("--open")
+    if getattr(args, "lines", None):
+        cmd.extend(["--lines", str(args.lines)])
+    if getattr(args, "severity", None):
+        cmd.extend(["--severity", args.severity])
+    if getattr(args, "type", None):
+        cmd.extend(["--type", args.type])
+    return run_command(cmd, f"SonarQube ({subcmd})")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Unified lint, type check, and format runner for inky-frame using uv.")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
@@ -168,6 +194,7 @@ def main() -> int:
     check_parser = subparsers.add_parser("check", help="Run all checks (ruff check, ruff format --check, pyright)")
     check_parser.add_argument("--skip-ruff", action="store_true", help="Skip ruff lint and format checks")
     check_parser.add_argument("--skip-pyright", action="store_true", help="Skip pyright type check")
+    check_parser.add_argument("--with-sonar", action="store_true", help="Include SonarQube scan and quality gate check")
 
     # fix command
     fix_parser = subparsers.add_parser("fix", help="Autofix ruff issues and format code")
@@ -190,12 +217,42 @@ def main() -> int:
     ruff_parser.add_argument("--fix", action="store_true", help="Autofix fixable errors")
     ruff_parser.add_argument("--unsafe", action="store_true", help="Include unsafe fixes")
 
+    # sonar command
+    sonar_parser = subparsers.add_parser(
+        "sonar", help="Run SonarQube operations (scan, status, issues, open, start, stop, logs)"
+    )
+    sonar_parser.add_argument(
+        "action",
+        nargs="?",
+        default="scan",
+        choices=["scan", "status", "issues", "start", "stop", "logs", "open"],
+        help="SonarQube action to execute (default: scan)",
+    )
+    sonar_parser.add_argument("--strict", action="store_true", help="Fail if Quality Gate does not pass (scan only)")
+    sonar_parser.add_argument("--open", action="store_true", help="Open browser dashboard after scan")
+    sonar_parser.add_argument("--lines", type=int, default=100, help="Log lines to display (logs only)")
+    sonar_parser.add_argument(
+        "--severity",
+        "-s",
+        default=None,
+        choices=["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"],
+        help="Filter issues by severity",
+    )
+    sonar_parser.add_argument(
+        "--type",
+        "-t",
+        default=None,
+        choices=["BUG", "VULNERABILITY", "CODE_SMELL", "SECURITY_HOTSPOT"],
+        help="Filter issues by type",
+    )
+
     args = parser.parse_args()
 
     if args.command is None or args.command == "check":
         if args.command is None:
             args.skip_ruff = False
             args.skip_pyright = False
+            args.with_sonar = False
         return cmd_check(args)
     elif args.command == "fix":
         return cmd_fix(args)
@@ -205,6 +262,8 @@ def main() -> int:
         return cmd_pyright(args)
     elif args.command == "ruff":
         return cmd_ruff(args)
+    elif args.command == "sonar":
+        return cmd_sonar(args)
     else:
         parser.print_help()
         return 1
