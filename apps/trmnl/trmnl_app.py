@@ -1,12 +1,10 @@
 import gc
-import struct
-from urllib import urequest  # type: ignore[attr-defined]
-
-import jpegdec
-import pngdec
-import urequests
 
 from core.inky_app_base import InkyAppBase
+
+from .trmnl_api import FW_VERSION, TRMNLApi
+from .trmnl_renderer import render_image_file
+from .trmnl_view import render_setup_screen
 
 # Try loading TRMNL settings from secrets.py if present
 try:
@@ -36,11 +34,15 @@ def resolve_image_filename() -> str:
         return "/trmnl-display.img"
 
 
-IMAGE_FILENAME = resolve_image_filename()
-PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
-JPEG_MAGIC = b"\xff\xd8"
-BMP_MAGIC = b"BM"
-FW_VERSION = "1.8.16"
+def _resolve_device_mac() -> str:
+    """Read the hardware Wi-Fi MAC address, or return a zero MAC."""
+    try:
+        import network  # type: ignore[import-not-found]
+
+        mac = network.WLAN(network.STA_IF).config("mac")
+        return ":".join(f"{b:02X}" for b in mac)
+    except Exception:
+        return "00:00:00:00:00:00"
 
 
 class TRMNLApp(InkyAppBase):
@@ -57,11 +59,9 @@ class TRMNLApp(InkyAppBase):
         device_id: str | None = None,
     ):
         super().__init__()
-        self.api_key = TRMNL_API_KEY if api_key is None else api_key
         raw_base = TRMNL_BASE_URL if base_url is None else base_url
         self.base_url = (raw_base or "http://byos.local").rstrip("/")
-        self.host = self.base_url.split("://", 1)[-1].split("/", 1)[0]
-        self.device_id = TRMNL_DEVICE_ID if device_id is None else device_id
+        self.device_id = (TRMNL_DEVICE_ID if device_id is None else device_id) or _resolve_device_mac()
         self.refresh_rate = 900  # Default 15 min refresh per TRMNL spec
         self.friendly_id = ""
         self.current_filename = ""
@@ -69,214 +69,40 @@ class TRMNLApp(InkyAppBase):
         self.setup_message = ""
         self.setup_sd_card()
 
-        if not self.device_id:
-            try:
-                import network  # type: ignore[import-not-found]
+        self.api = TRMNLApi(
+            base_url=self.base_url,
+            device_id=self.device_id,
+            api_key=TRMNL_API_KEY if api_key is None else api_key,
+            fw_version=FW_VERSION,
+            width=self.width or 800,
+            height=self.height or 480,
+            logger=self.logger,
+        )
 
-                mac = network.WLAN(network.STA_IF).config("mac")
-                self.device_id = ":".join(f"{b:02X}" for b in mac)
-            except Exception:
-                self.device_id = "00:00:00:00:00:00"
+    @property
+    def api_key(self) -> str:
+        return self.api.api_key
+
+    @api_key.setter
+    def api_key(self, value: str):
+        self.api.api_key = value
 
     def teardown(self):
         self.cleanup_sd_card()
         self.has_image = False
-
-    def request_setup(self) -> dict | None:
-        """Call /api/setup to pair or provision device on the TRMNL server."""
-        url = f"{self.base_url}/api/setup"
-        headers = {
-            "Host": self.host,
-            "ID": self.device_id,
-            "FW-Version": FW_VERSION,
-            "Model": "inky_frame_7_3",
-            "Content-Type": "application/json",
-        }
-        try:
-            self.logger.info(f"Polling TRMNL Setup API: {url}")
-            resp = urequests.get(url, headers=headers)
-            data = resp.json() if resp.status_code in (200, 202) else None
-            resp.close()
-            return data
-        except Exception as e:
-            self.logger.error(f"Failed to query TRMNL Setup API: {e}")
-            return None
-
-    def fetch_display_metadata(self, endpoint: str = "/api/display") -> dict | None:
-        """Call TRMNL Display API and return response metadata."""
-        url = f"{self.base_url}{endpoint}"
-        headers = {
-            "Host": self.host,
-            "ID": self.device_id,
-            "Access-Token": self.api_key,
-            "FW-Version": FW_VERSION,
-            "Model": "inky_frame_7_3",
-            "Width": str(self.width or 800),
-            "Height": str(self.height or 480),
-            "Content-Type": "application/json",
-        }
-        try:
-            self.logger.info(f"Polling TRMNL Display API: {url}")
-            resp = urequests.get(url, headers=headers)
-            if resp.status_code not in (200, 0, 202):
-                self.logger.error(f"TRMNL API error HTTP {resp.status_code}: {resp.text}")
-                resp.close()
-                return None
-            data = resp.json()
-            resp.close()
-            return data
-        except Exception as e:
-            self.logger.error(f"Failed to query TRMNL Display API: {e}")
-            return None
-
-    def _normalize_image_url(self, image_url: str) -> str:
-        """Ensure image URL includes scheme, host, and port matching base_url if omitted."""
-        if image_url.startswith("/"):
-            return f"{self.base_url}{image_url}"
-        base_proto, _, base_host = self.base_url.partition("://")
-        if ":" in base_host:
-            host_only = base_host.split(":", 1)[0]
-            prefix = f"{base_proto}://{host_only}/"
-            if image_url.startswith(prefix):
-                return f"{self.base_url}/" + image_url[len(prefix) :]
-        return image_url
-
-    def download_image(self, image_url: str) -> bool:
-        """Download remote image to SD card in chunks to minimize heap usage."""
-        image_url = self._normalize_image_url(image_url)
-        try:
-            self.logger.info(f"Downloading TRMNL image from {image_url}")
-            sock = urequest.urlopen(image_url)
-            buf = bytearray(1024)
-            img_path = resolve_image_filename()
-            with open(img_path, "wb") as f:
-                while True:
-                    n = sock.readinto(buf)
-                    if n == 0:
-                        break
-                    f.write(memoryview(buf)[:n])
-            sock.close()
-            del buf
-            gc.collect()
-            return True
-        except Exception as e:
-            self.logger.error(f"Error downloading TRMNL image: {e}")
-            return False
-
-    def _draw_bmp_byte_pixels(self, byte_val: int, x: int, y: int, width: int, pen_0: int, pen_1: int):
-        for bit in range(8):
-            px = x + bit
-            if px >= width:
-                break
-            pen = pen_1 if (byte_val & (0x80 >> bit)) else pen_0
-            self.graphics.set_pen(pen)
-            self.graphics.pixel(px, y)
-
-    def _draw_bmp_row(self, row_buf: bytearray, y: int, width: int, pen_0: int, pen_1: int):
-        """Draw a single unpacked row of 1-bit BMP bytes to the framebuffer."""
-        x = 0
-        for byte_val in row_buf:
-            if x >= width:
-                break
-            if byte_val == 0xFF:
-                self.graphics.set_pen(pen_1)
-                self.graphics.pixel_span(x, y, min(8, width - x))
-            elif byte_val == 0x00:
-                self.graphics.set_pen(pen_0)
-                self.graphics.pixel_span(x, y, min(8, width - x))
-            else:
-                self._draw_bmp_byte_pixels(byte_val, x, y, width, pen_0, pen_1)
-            x += 8
-
-    def decode_1bit_bmp(self, filename: str) -> bool:
-        """Decode uncompressed 1-bit BMP directly onto Inky Frame framebuffer."""
-        try:
-            with open(filename, "rb") as f:
-                header = f.read(54)
-                if len(header) < 54 or not header.startswith(BMP_MAGIC):
-                    return False
-
-                offset = struct.unpack("<I", header[10:14])[0]
-                width, height, _, bpp, compression = struct.unpack("<iiHHI", header[18:34])
-
-                if bpp != 1 or compression != 0:
-                    self.logger.error(f"Unsupported BMP format: bpp={bpp}, comp={compression}")
-                    return False
-
-                palette_data = f.read(8)
-                c0_brightness = palette_data[0] + palette_data[1] + palette_data[2]
-                c1_brightness = palette_data[4] + palette_data[5] + palette_data[6]
-                pen_0 = 1 if c0_brightness > c1_brightness else 0
-                pen_1 = 0 if pen_0 == 1 else 1
-
-                top_down = height < 0
-                abs_height = abs(height)
-                row_bytes = ((width + 31) // 32) * 4
-
-                f.seek(offset)
-                row_buf = bytearray(row_bytes)
-
-                for r in range(abs_height):
-                    y = r if top_down else (abs_height - 1 - r)
-                    if f.readinto(row_buf) < row_bytes:
-                        break
-                    self._draw_bmp_row(row_buf, y, width, pen_0, pen_1)
-            return True
-        except Exception as e:
-            self.logger.error(f"Error decoding 1-bit BMP: {e}")
-            return False
-
-    def draw_setup_screen(self):
-        """Render pairing and onboarding instructions when device is unconfigured."""
-        g = self.graphics
-        w = self.width or 800
-        h = self.height or 480
-
-        g.set_pen(1)
-        g.clear()
-
-        # Header bar
-        g.set_pen(0)
-        g.rectangle(0, 0, w, 60)
-        g.set_pen(1)
-        g.set_font("sans")
-        g.text("TRMNL DISPLAY  |  SETUP & PAIRING", 20, 40, scale=1.0)
-
-        # Body info
-        g.set_pen(0)
-        g.set_font("sans")
-        g.text("Register this device on your TRMNL server dashboard:", 30, 110, scale=0.8)
-
-        # Box for device credentials
-        g.rectangle(30, 140, w - 60, 150)
-        g.set_pen(1)
-        g.rectangle(32, 142, w - 64, 146)
-        g.set_pen(0)
-        g.text(f"Device MAC (ID):  {self.device_id}", 50, 180, scale=0.9)
-        g.text(f"Server URL:       {self.base_url}", 50, 220, scale=0.9)
-        if self.friendly_id:
-            g.text(f"Friendly ID:      {self.friendly_id}", 50, 260, scale=0.9)
-
-        if self.setup_message:
-            g.text(self.setup_message, 30, 330, scale=0.7)
-
-        # Footer
-        g.set_font("bitmap8")
-        g.text("Button A: Refresh / Pair    Button B: Reload Current", 30, h - 30, scale=2)
-        self.graphics.update()
 
     def _handle_setup_provisioning(self) -> bool:
         """Attempt auto-provisioning via /api/setup if API key is not configured."""
         if self.api_key:
             return True
 
-        setup_data = self.request_setup()
+        setup_data = self.api.request_setup()
         if setup_data:
             self.api_key = setup_data.get("api_key", "")
             self.friendly_id = setup_data.get("friendly_id", "")
             self.setup_message = setup_data.get("message", "")
             setup_img = setup_data.get("image_url")
-            if setup_img and self.download_image(setup_img):
+            if setup_img and self.api.download_image(setup_img, resolve_image_filename()):
                 self.has_image = True
                 return False
 
@@ -298,7 +124,7 @@ class TRMNLApp(InkyAppBase):
             self.has_image = True
             return True
 
-        if self.download_image(image_url):
+        if self.api.download_image(image_url, resolve_image_filename()):
             self.has_image = True
             if filename:
                 self.current_filename = filename
@@ -315,7 +141,7 @@ class TRMNLApp(InkyAppBase):
             return
 
         endpoint = "/api/display" if advance_playlist else "/api/display/current"
-        metadata = self.fetch_display_metadata(endpoint)
+        metadata = self.api.fetch_display_metadata(endpoint)
         if not metadata:
             self.show_error("Unable to connect to TRMNL API")
             self.graphics.update()
@@ -325,7 +151,7 @@ class TRMNLApp(InkyAppBase):
         if metadata.get("status") == 202:
             self.setup_message = "Device pending approval on server..."
             setup_img = metadata.get("image_url")
-            self.has_image = bool(setup_img and self.download_image(setup_img))
+            self.has_image = bool(setup_img and self.api.download_image(setup_img, resolve_image_filename()))
             return
 
         self._handle_display_image(metadata)
@@ -353,47 +179,22 @@ class TRMNLApp(InkyAppBase):
     def draw(self):
         """Render downloaded TRMNL image or setup screen to Inky Frame display."""
         if not self.has_image:
-            self.draw_setup_screen()
+            render_setup_screen(
+                self.graphics,
+                self.width or 800,
+                self.height or 480,
+                self.device_id,
+                self.base_url,
+                self.friendly_id,
+                self.setup_message,
+            )
             return
 
         gc.collect()
         self.graphics.set_pen(1)
         self.graphics.clear()
 
-        img_path = resolve_image_filename()
-        try:
-            with open(img_path, "rb") as f:
-                header = f.read(8)
-        except OSError as e:
-            self.logger.error(f"Cannot read image file: {e}")
-            self.show_error("Image file missing on SD card")
-            self.graphics.update()
-            return
-
-        try:
-            if header.startswith(PNG_MAGIC):
-                png = pngdec.PNG(self.graphics)
-                png.open_file(img_path)
-                png.decode(0, 0)
-            elif header.startswith(JPEG_MAGIC):
-                jpeg = jpegdec.JPEG(self.graphics)
-                jpeg.open_file(img_path)
-                jpeg.decode()
-            elif header.startswith(BMP_MAGIC):
-                if not self.decode_1bit_bmp(img_path):
-                    self.graphics.update()
-                    return
-            else:
-                self.logger.error(f"Unrecognized image header: {header!r}")
-                self.show_error("Unsupported image format from TRMNL")
-                self.graphics.update()
-                return
-        except Exception as e:
-            self.logger.error(f"Error decoding image: {e}")
-            self.show_error("Unable to decode TRMNL image")
-            self.graphics.update()
-            return
-
+        render_image_file(self.graphics, resolve_image_filename(), self.logger, self.show_error)
         self.graphics.update()
 
     def sleep_until_next_refresh(self):
